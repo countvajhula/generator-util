@@ -38,7 +38,28 @@
   (check-equal? (->list (generator-filter odd? (->generator (list 1 2 3 4 5 6))))
                 '(1 3 5))
   (check-equal? (->list (generator-filter even? (->generator (list 1 2 3 4 5 6))))
-                '(2 4 6)))
+                '(2 4 6))
+  (check-equal? (->list (generator-flatten (->generator (list (list 1 2) (list 3 4) (list 5) (list 6)))))
+                '(1 2 3 4 5 6))
+  (check-equal? (->list (generator-flatten (->generator (list (list 1 2 3 4 5 6)))))
+                '(1 2 3 4 5 6))
+  (check-equal? (->list (generator-fold + (->generator (list 1 2 3 4))))
+                '(1 3 6 10))
+  (check-equal? (->list (generator-fold +
+                                        (->generator (list 1 2 3 4))
+                                        12))
+                '(13 15 18 22))
+  (check-equal? (->list (generator-fold * (->generator (list 1 2 3 4))))
+                '(1 2 6 24))
+  (check-equal? (->list (generator-fold .. (->generator (list "aa" "bb" "cc"))))
+                (list "aa" "bbaa" "ccbbaa"))
+  (check-equal? (->list (generator-fold ..
+                                        (->generator (list "aa" "bb" "cc"))
+                                        #:order 'bab))
+                (list "aa" "aabb" "aabbcc"))
+  (let-values ([(head gen) (generator-peek (->generator (list 1 2 3)))])
+    (check-equal? head 1)
+    (check-equal? (->list gen) '(1 2 3))))
 
 (module+ main
   ;; (Optional) main submodule. Put code here if you need it to be executed when

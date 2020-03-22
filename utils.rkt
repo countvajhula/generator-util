@@ -13,7 +13,8 @@
                     append)
          (only-in algebraic/prelude
                   &&
-                  ||)
+                  ||
+                  flip)
          functional-utils
          core-utils
          collection-utils
@@ -31,6 +32,8 @@
          generator-map
          generator-filter
          generator-flatten
+         generator-fold
+         generator-peek
          in-producer)
 
 (struct generator-collection (gen)
@@ -120,7 +123,6 @@
                    (yield cur))
                  (loop next (gen)))))))
 
-;; generator-flatten
 (define (flatten-one-level vs)
   (for-each (λ (v)
               (yield v)
@@ -139,3 +141,30 @@
                      (flatten-one-level result))))
           (begin (flatten-one-level cur)
                  (loop next (gen)))))))
+
+(define (generator-peek gen)
+  (let ([val (gen)])
+    (values val
+            (generator-cons val gen))))
+
+(define (generator-fold f gen [base undefined] #:order [order 'abb])
+  (generator ()
+    (let-values ([(head gen) (generator-peek gen)])
+      (let ([base (if (undefined? base)
+                      ((id f) head)
+                      base)]
+            [f (if (= order 'abb)
+                   f
+                   (flip f))])
+        (let loop ([acc base]
+                   [cur (gen)]
+                   [next (gen)])
+          (let ([acc (f cur acc)])
+            (if (= (generator-state gen)
+                   'done)
+                (begin (yield acc)
+                       (let ([result (gen)])
+                         (unless (void? result)
+                           (yield (f result acc)))))
+                (begin (yield acc)
+                       (loop acc next (gen))))))))))
