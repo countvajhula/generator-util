@@ -26,15 +26,15 @@
          gen:producer
          producer-state
          producer?
+         in-producer
          generator-cons
-         generator-append
-         generator-splitf-at
+         generator-peek
          generator-map
          generator-filter
-         generator-flatten
          generator-fold
-         generator-peek
-         in-producer)
+         generator-append
+         generator-splitf-at
+         generator-flatten)
 
 (struct generator-collection (gen)
   #:transparent
@@ -52,6 +52,13 @@
   #:fast-defaults ([generator?
                     (define producer-state generator-state)]))
 
+(define (in-producer gen [stop undefined] . args)
+  (let ([pred (if (undefined? stop)
+                  (const #t)
+                  (!! (curry = stop)))])
+    (takef (build-sequence (apply unthunk gen args))
+           pred)))
+
 (define (generator-cons v gen)
   (generator ()
     (yield v)
@@ -64,35 +71,10 @@
           (begin (yield cur)
                  (loop next (gen)))))))
 
-(define (generator-append a b)
-  (generator ()
-    (let loop ([cur (a)]
-               [next (a)])
-      (if (= (generator-state a)
-             'done)
-          (begin (yield cur)
-                 (a))
-          (begin (yield cur)
-                 (loop next (a)))))
-    (let loop ([cur (b)]
-               [next (b)])
-      (if (= (generator-state b)
-             'done)
-          (begin (yield cur)
-                 (b))
-          (begin (yield cur)
-                 (loop next (b)))))))
-
-(define (in-producer gen [stop undefined] . args)
-  (let ([pred (if (undefined? stop)
-                  (const #t)
-                  (!! (curry = stop)))])
-    (takef (build-sequence (apply unthunk gen args))
-           pred)))
-
-(define (generator-splitf-at gen pred)
-  (splitf-at (in-producer gen (void))
-             pred))
+(define (generator-peek gen)
+  (let ([val (gen)])
+    (values val
+            (generator-cons val gen))))
 
 (define (generator-map pred gen)
   (generator ()
@@ -123,30 +105,6 @@
                    (yield cur))
                  (loop next (gen)))))))
 
-(define (flatten-one-level vs)
-  (for-each (λ (v)
-              (yield v)
-              (void))
-            vs))
-
-(define (generator-flatten gen)
-  (generator ()
-    (let loop ([cur (gen)]
-               [next (gen)])
-      (if (= (generator-state gen)
-             'done)
-          (begin (flatten-one-level cur)
-                 (let ([result (gen)])
-                   (unless (void? result)
-                     (flatten-one-level result))))
-          (begin (flatten-one-level cur)
-                 (loop next (gen)))))))
-
-(define (generator-peek gen)
-  (let ([val (gen)])
-    (values val
-            (generator-cons val gen))))
-
 (define (generator-fold f gen [base undefined] #:order [order 'abb])
   (generator ()
     (let-values ([(head gen) (generator-peek gen)])
@@ -168,3 +126,45 @@
                            (yield (f result acc)))))
                 (begin (yield acc)
                        (loop acc next (gen))))))))))
+
+(define (generator-append a b)
+  (generator ()
+    (let loop ([cur (a)]
+               [next (a)])
+      (if (= (generator-state a)
+             'done)
+          (begin (yield cur)
+                 (a))
+          (begin (yield cur)
+                 (loop next (a)))))
+    (let loop ([cur (b)]
+               [next (b)])
+      (if (= (generator-state b)
+             'done)
+          (begin (yield cur)
+                 (b))
+          (begin (yield cur)
+                 (loop next (b)))))))
+
+(define (generator-splitf-at gen pred)
+  (splitf-at (in-producer gen (void))
+             pred))
+
+(define (flatten-one-level vs)
+  (for-each (λ (v)
+              (yield v)
+              (void))
+            vs))
+
+(define (generator-flatten gen)
+  (generator ()
+    (let loop ([cur (gen)]
+               [next (gen)])
+      (if (= (generator-state gen)
+             'done)
+          (begin (flatten-one-level cur)
+                 (let ([result (gen)])
+                   (unless (void? result)
+                     (flatten-one-level result))))
+          (begin (flatten-one-level cur)
+                 (loop next (gen)))))))
