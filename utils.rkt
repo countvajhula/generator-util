@@ -27,6 +27,7 @@
          producer-state
          producer?
          in-producer
+         empty-generator
          generator-cons
          generator-peek
          generator-map
@@ -58,6 +59,10 @@
                   (!! (curry = stop)))])
     (takef (build-sequence (apply unthunk gen args))
            pred)))
+
+(define (empty-generator)
+  (generator ()
+    (void)))
 
 (define (generator-cons v gen)
   (generator ()
