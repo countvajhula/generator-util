@@ -10,7 +10,8 @@
          (except-in data/collection
                     foldl
                     foldl/steps
-                    append)
+                    append
+                    index-of)
          (only-in algebraic/prelude
                   &&
                   ||
@@ -21,11 +22,13 @@
          relation)
 
 (provide generator-collection
-         generator-collection-gen
-         generator-collection?
          gen:producer
-         producer-state
-         producer?
+         producer/c
+         (contract-out
+          [generator-collection? (-> any/c boolean?)]
+          [generator-collection-gen (-> generator-collection? generator?)]
+          [producer? (-> any/c boolean?)]
+          [producer-state (-> producer? symbol?)])
          in-producer
          empty-generator
          generator-cons
@@ -81,17 +84,17 @@
     (values val
             (generator-cons val gen))))
 
-(define (generator-map pred gen)
+(define (generator-map f gen)
   (generator ()
     (let loop ([cur (gen)]
                [next (gen)])
       (if (= (generator-state gen)
              'done)
-          (begin (yield (pred cur))
+          (begin (yield (f cur))
                  (let ([result (gen)])
                    (unless (void? result)
-                     (pred result))))
-          (begin (yield (pred cur))
+                     (f result))))
+          (begin (yield (f cur))
                  (loop next (gen)))))))
 
 (define (generator-filter pred gen)
