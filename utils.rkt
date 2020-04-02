@@ -34,7 +34,7 @@
          generator-filter
          generator-fold
          generator-append
-         generator-splitf-at
+         generator-split-where
          generator-flatten)
 
 (struct generator-collection (gen)
@@ -57,8 +57,8 @@
   (let ([pred (if (undefined? stop)
                   (const #t)
                   (!! (curry = stop)))])
-    (takef (build-sequence (apply unthunk gen args))
-           pred)))
+    (take-while pred
+                (build-sequence (apply unthunk gen args)))))
 
 (define (empty-generator)
   (generator ()
@@ -151,9 +151,9 @@
           (begin (yield cur)
                  (loop next (b)))))))
 
-(define (generator-splitf-at gen pred)
-  (splitf-at (in-producer gen (void))
-             pred))
+(define (generator-split-where pred gen)
+  (split-where pred
+               (in-producer gen (void))))
 
 (define (flatten-one-level vs)
   (for-each (λ (v)

@@ -25,7 +25,7 @@
   (check-equal? (->list (generator-append (->generator (list 1 2 3)) (->generator (list 4 5 6)))) '(1 2 3 4 5 6))
   (check-equal? (->list (generator-append (->generator (list 1)) (->generator (list 4)))) '(1 4))
   (check-equal? (let-values ([(a b)
-                              (generator-splitf-at (->generator (list 1 3 5 2 4)) odd?)])
+                              (generator-split-where even? (->generator (list 1 3 5 2 4)))])
                   (->list (map ->list (list a b))))
                 (list '(1 3 5) '(2 4)))
   (check-equal? (->list (in-producer (->generator (list 1 2 3 4 (void) 5 6))
