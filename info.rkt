@@ -2,7 +2,6 @@
 (define collection "generator-utils")
 (define deps '("base"
                "collections-lib"
-               "functional-utils"
                "relation"))
 (define build-deps '("scribble-lib"
                      "scribble-abbrevs"

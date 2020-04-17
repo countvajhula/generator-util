@@ -4,7 +4,8 @@
          racket/stream
          racket/match
          racket/generator
-         racket/function
+         (only-in racket/function
+                  const)
          racket/generic
          racket/undefined
          (except-in data/collection
@@ -12,11 +13,6 @@
                     foldl/steps
                     append
                     index-of)
-         (only-in algebraic/prelude
-                  &&
-                  ||
-                  flip)
-         functional-utils
          core-utils
          collection-utils
          relation)

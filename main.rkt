@@ -1,14 +1,13 @@
 #lang racket/base
 
 (module+ test
-  (require rackunit)
-  (require racket/stream)
-  (require racket/function)
-  (require (except-in data/collection
+  (require rackunit
+           racket/stream
+           (except-in data/collection
                       foldl
                       foldl/steps
-                      append))
-  (require relation))
+                      append)
+           relation))
 
 ;; Code here
 
