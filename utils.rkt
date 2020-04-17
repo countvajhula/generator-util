@@ -17,24 +17,38 @@
          collection-utils
          relation)
 
-(provide generator-collection
-         gen:producer
+(provide gen:producer
          producer/c
          (contract-out
           [generator-collection? (-> any/c boolean?)]
+          [generator-collection (-> generator? collection?)]
           [generator-collection-gen (-> generator-collection? generator?)]
           [producer? (-> any/c boolean?)]
-          [producer-state (-> producer? symbol?)])
-         in-producer
-         empty-generator
-         generator-cons
-         generator-peek
-         generator-map
-         generator-filter
-         generator-fold
-         generator-append
-         generator-split-where
-         generator-flatten)
+          [producer-state (-> producer? symbol?)]
+          [in-producer (->* (generator?)
+                            (any/c)
+                            #:rest (listof any/c)
+                            sequence?)]
+          [empty-generator generator?]
+          [generator-cons (-> any/c
+                              generator?
+                              generator?)]
+          [generator-peek (-> generator?
+                              (values any/c generator?))]
+          [generator-map (-> (-> any/c any/c)
+                             generator?
+                             generator?)]
+          [generator-filter (-> (-> any/c boolean?)
+                                generator?
+                                generator?)]
+          [generator-fold (->* ((-> any/c any/c any/c) generator?)
+                               (any/c #:order (one-of/c 'abb 'bab))
+                               generator?)]
+          [generator-append (-> generator? generator? generator?)]
+          [generator-split-where (-> (-> any/c boolean?)
+                                     generator?
+                                     (values sequence? sequence?))]
+          [generator-flatten (-> generator? generator?)]))
 
 (struct generator-collection (gen)
   #:transparent
@@ -59,7 +73,7 @@
     (take-while pred
                 (build-sequence (apply unthunk gen args)))))
 
-(define (empty-generator)
+(define empty-generator
   (generator ()
     (void)))
 
