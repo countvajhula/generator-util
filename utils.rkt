@@ -35,6 +35,9 @@
           [generator-cons (-> any/c
                               generator?
                               generator?)]
+          [make-generator (->* ()
+                               #:rest (listof any/c)
+                               generator?)]
           [generator-peek (-> generator?
                               (values any/c generator?))]
           [generator-map (-> (-> any/c any/c)
@@ -94,6 +97,11 @@
                        (gen))
                 (begin (yield cur)
                        (loop next (gen)))))))))
+
+(define (make-generator . vals)
+  (match vals
+    ['() (generator-null)]
+    [(cons v vs) (generator-cons v (apply make-generator vs))]))
 
 (define (generator-peek gen)
   (let ([val (gen)])
