@@ -50,9 +50,6 @@
                                (any/c #:order (one-of/c 'abb 'bab))
                                generator?)]
           [generator-append (-> generator? generator? generator?)]
-          [generator-split-where (-> (-> any/c boolean?)
-                                     generator?
-                                     (values sequence? sequence?))]
           [generator-flatten (-> generator? generator?)]))
 
 (define-generics producer
@@ -181,10 +178,6 @@
                  (b))
           (begin (yield cur)
                  (loop next (b)))))))
-
-(define (generator-split-where pred gen)
-  (split-where pred
-               (in-producer gen (void))))
 
 (define (flatten-one-level vs)
   (for-each (λ (v)
