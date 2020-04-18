@@ -3,6 +3,7 @@
 (module+ test
   (require rackunit
            racket/stream
+           racket/generator
            (except-in data/collection
                       foldl
                       foldl/steps
@@ -21,6 +22,21 @@
   ;; required by another module.
 
   (check-equal? (->list (generator-cons 4 (->generator (list 1 2 3)))) '(4 1 2 3))
+  (let ([g (generator-cons 4 (->generator (list 1)))])
+    (g)
+    (g)
+    (g)
+    (check-equal? (generator-state g) 'done))
+  (let ([g (generator-cons 4 (generator-null))])
+    (g)
+    (g)
+    (check-equal? (generator-state g) 'done)
+    (check-equal? (g) (void)))
+  (let ([g (generator-cons 4 (generator-null 5))])
+    (g)
+    (g)
+    (check-equal? (generator-state g) 'done)
+    (check-equal? (g) 5))
   (check-equal? (->list (generator-append (->generator (list 1 2 3)) (->generator (list 4 5 6)))) '(1 2 3 4 5 6))
   (check-equal? (->list (generator-append (->generator (list 1)) (->generator (list 4)))) '(1 4))
   (check-equal? (let-values ([(a b)

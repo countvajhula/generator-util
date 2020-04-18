@@ -29,7 +29,9 @@
                             (any/c)
                             #:rest (listof any/c)
                             sequence?)]
-          [empty-generator generator?]
+          [generator-null (->* ()
+                               (any/c)
+                               generator?)]
           [generator-cons (-> any/c
                               generator?
                               generator?)]
@@ -73,21 +75,25 @@
     (take-while pred
                 (build-sequence (apply unthunk gen args)))))
 
-(define empty-generator
+(define (generator-null [return (void)])
   (generator ()
-    (void)))
+    return))
 
 (define (generator-cons v gen)
   (generator ()
     (yield v)
-    (let loop ([cur (gen)]
-               [next (gen)])
+    (let ([cur (gen)])
       (if (= (generator-state gen)
              'done)
-          (begin (yield cur)
-                 (gen))
-          (begin (yield cur)
-                 (loop next (gen)))))))
+          cur
+          (let loop ([cur cur]
+                     [next (gen)])
+            (if (= (generator-state gen)
+                   'done)
+                (begin (yield cur)
+                       (gen))
+                (begin (yield cur)
+                       (loop next (gen)))))))))
 
 (define (generator-peek gen)
   (let ([val (gen)])
