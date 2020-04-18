@@ -55,21 +55,25 @@
                                      (values sequence? sequence?))]
           [generator-flatten (-> generator? generator?)]))
 
+(define-generics producer
+  (producer-state producer)
+  #:fast-defaults ([generator?
+                    (define producer-state generator-state)]))
+
 (struct generator-collection (gen)
   #:transparent
   #:methods gen:collection
   [(define (conj st v)
      (let ([gen (generator-collection-gen st)])
        (generator-collection (generator-cons v gen))))]
+  #:methods gen:producer
+  [(define (producer-state st)
+     (let ([gen (generator-collection-gen st)])
+       (generator-state gen)))]
   #:property prop:procedure
   (λ (self . args)
     (let ([gen (generator-collection-gen self)])
       (apply gen args))))
-
-(define-generics producer
-  (producer-state producer)
-  #:fast-defaults ([generator?
-                    (define producer-state generator-state)]))
 
 (define (in-producer gen [stop undefined] . args)
   (let ([pred (if (undefined? stop)
