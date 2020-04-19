@@ -23,9 +23,6 @@
 (provide gen:generator
          generator/c
          (contract-out
-          [generator-collection? (-> any/c boolean?)]
-          [generator-collection (-> generator? collection?)]
-          [generator-collection-gen (-> generator-collection? generator?)]
           [generator? (-> any/c boolean?)]
           [generator-state (-> generator? symbol?)]
           [in-producer (->* (generator?)
@@ -59,21 +56,6 @@
   (generator-state generator)
   #:fast-defaults ([b:generator?
                     (define generator-state b:generator-state)]))
-
-(struct generator-collection (gen)
-  #:transparent
-  #:methods gen:collection
-  [(define (conj st v)
-     (let ([gen (generator-collection-gen st)])
-       (generator-collection (generator-cons v gen))))]
-  #:methods gen:generator
-  [(define (generator-state st)
-     (let ([gen (generator-collection-gen st)])
-       (generator-state gen)))]
-  #:property prop:procedure
-  (λ (self . args)
-    (let ([gen (generator-collection-gen self)])
-      (apply gen args))))
 
 (define (in-producer gen [stop undefined] . args)
   (let ([pred (if (undefined? stop)
