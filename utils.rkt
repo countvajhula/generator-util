@@ -3,7 +3,10 @@
 (require racket/contract
          racket/stream
          racket/match
-         racket/generator
+         (prefix-in b: racket/generator)
+         (only-in racket/generator
+                  generator
+                  yield)
          (only-in racket/function
                   const)
          racket/generic
@@ -17,14 +20,14 @@
          collection-utils
          relation)
 
-(provide gen:producer
-         producer/c
+(provide gen:generator
+         generator/c
          (contract-out
           [generator-collection? (-> any/c boolean?)]
           [generator-collection (-> generator? collection?)]
           [generator-collection-gen (-> generator-collection? generator?)]
-          [producer? (-> any/c boolean?)]
-          [producer-state (-> producer? symbol?)]
+          [generator? (-> any/c boolean?)]
+          [generator-state (-> generator? symbol?)]
           [in-producer (->* (generator?)
                             (any/c)
                             #:rest (listof any/c)
@@ -52,10 +55,10 @@
           [generator-append (-> generator? generator? generator?)]
           [generator-flatten (-> generator? generator?)]))
 
-(define-generics producer
-  (producer-state producer)
-  #:fast-defaults ([generator?
-                    (define producer-state generator-state)]))
+(define-generics generator
+  (generator-state generator)
+  #:fast-defaults ([b:generator?
+                    (define generator-state b:generator-state)]))
 
 (struct generator-collection (gen)
   #:transparent
@@ -63,8 +66,8 @@
   [(define (conj st v)
      (let ([gen (generator-collection-gen st)])
        (generator-collection (generator-cons v gen))))]
-  #:methods gen:producer
-  [(define (producer-state st)
+  #:methods gen:generator
+  [(define (generator-state st)
      (let ([gen (generator-collection-gen st)])
        (generator-state gen)))]
   #:property prop:procedure
