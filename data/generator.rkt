@@ -16,8 +16,6 @@
                     foldl/steps
                     append
                     index-of)
-         core-utils
-         collection-utils
          relation)
 
 (provide gen:generator
@@ -56,6 +54,18 @@
           [generator-append (-> generator? generator? generator?)]
           [generator-join (-> generator? generator?)]
           [generator-flatten (-> generator? generator?)]))
+
+(define (undefined? v)
+  (eq? v undefined))
+
+(define (take-while pred seq)
+  (if (empty? seq)
+      (stream)
+      (let ([v (first seq)]
+            [vs (rest seq)])
+        (if (pred v)
+            (stream-cons v (take-while pred vs))
+            null))))
 
 (define-generics generator
   (generator-state generator)
