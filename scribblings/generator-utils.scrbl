@@ -15,7 +15,10 @@
                                  '(require generator-utils)
                                  '(require racket/set)
                                  '(require racket/generic)
-                                 '(require racket/generator)
+                                 '(require (prefix-in b: racket/generator))
+                                 '(require (only-in racket/generator
+                                                    generator
+                                                    yield))
                                  '(require racket/stream))))
 
 @title{Generator Utilities}
@@ -52,7 +55,7 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
 
 @defthing[gen:generator any/c]{
 
- A @tech/reference{generic interface} for generators.
+ A @tech/reference{generic interface} for generators, that wraps built-in generators but also enables providing generator semantics in custom types.
 
  @examples[
     #:eval eval-for-docs
@@ -91,4 +94,139 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
 
  }
 
+}
+
+@deftogether[(
+@defproc[(generator-done? [g generator?])
+         boolean?]
+@defproc[(generator-empty? [g generator?])
+         (values boolean? generator?)]
+	 )]{
+
+ Predicates to assert whether a generator is "empty" or "done." @racket[generator-empty?] is a statement about the "contents" of the generator, whereas @racket[generator-done?] is a statement about the "state" of the generator. This distinction is made because Racket generators evaluate to two different kinds of values -- first, the values that are @racketlink[yield]{yielded} from within the generator, and second, the return value of the generator which is not explicitly yielded. For the purposes of this interface, the yielded values are treated as the contents of the generator. Thus, if a generator yields no further values but nevertheless evaluates to a nontrivial return value, it is still considered empty. Explicitly, @racket[generator-done?] is equivalent to @racket[(eq? 'done (generator-state g))]. A generator that has exhausted all of its values but has not yet evaluated its return value is @emph{empty} but not @emph{done}.
+
+ @racket[generator-empty?] returns both a boolean value indicating whether the generator is empty or not, as well as a fresh generator intended to supplant the original generator in the calling context. This is necessary because checking for emptiness requires invoking the generator to inspect the first element, which mutates the original generator. The returned generator is equivalent to the original generator prior to the mutation.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator))
+    (generator-done? g)
+    (define-values (is-empty? g) (generator-empty? g))
+	is-empty?
+    (generator-done? g)
+	(g)
+    (generator-done? g)
+  ]
+}
+
+@defproc[(generator-peek [g generator?])
+         (values any/c generator?)]{
+
+ "Peek" at the first value in the generator without modifying it. Of course, inspecting the first element in a generator must necessarily modify it. To preserve the illusion that no mutation has taken place, a generator equivalent to the original one prior to mutation is returned along with the peeked-at value. This returned generator is expected to be used in place of the original one in the calling context as it will be functionally equivalent to the original one.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator 1 2 3))
+    (define-values (v g) (generator-peek g))
+	v
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-map [f (-> any/c any/c)] [g generator?])
+         generator?]{
+
+Analogous to @racket[map], yields a fresh generator whose values are the elements of @racket[g] transformed under @racket[f].
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator 1 2 3))
+	(define g (generator-map add1 g))
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-filter [f (-> any/c boolean?)] [g generator?])
+         generator?]{
+
+Analogous to @racket[filter], yields a fresh generator whose values are the elements of @racket[g] for which the predicate @racket[f] is true.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator 1 2 3 4 5))
+	(define g (generator-filter odd? g))
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-fold [f procedure?]
+                         [g generator?]
+                         [base any/c undefined]
+                         [#:order order (one-of/c 'abb 'bab) 'abb])
+         generator?]{
+
+Analogous to @racket[fold], yields a fresh generator whose values are the steps in the aggregation of the elements of @racket[g] under the folding function @racket[f].
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator 1 2 3 4))
+	(define g (generator-fold + g))
+	(g)
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-append [a generator?] [b generator?])
+         generator?]{
+
+Analogous to @racket[append], yields a fresh generator whose values are the elements of @racket[a] followed by the elements of @racket[b].
+
+@examples[
+    #:eval eval-for-docs
+	(define a (make-generator 1 2))
+	(define b (make-generator 3 4))
+	(define g (generator-append a b))
+	(g)
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-join [g generator?])
+         generator?]{
+
+Yields a fresh generator whose values are the elements of @racket[g] "flattened" by one level.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator (list 1) (list 2) (list 3)))
+	(define g (generator-join g))
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-flatten [g generator?])
+         generator?]{
+
+Yields a fresh generator whose values are the "flattened" elements of @racket[g]. This is equivalent to repeatedly applying @racket[generator-join] until the values are no longer sequences.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator (list (list (list 1))) (list (list (list 2))) (list (list (list 3)))))
+	(define g (generator-flatten g))
+	(g)
+	(g)
+	(g)
+  ]
 }
