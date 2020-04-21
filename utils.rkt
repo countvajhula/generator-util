@@ -90,9 +90,14 @@
     [(cons v vs) (generator-cons v (apply make-generator vs))]))
 
 (define (generator-peek gen)
-  (let ([val (gen)])
-    (values val
-            (generator-cons val gen))))
+  (if (generator-empty? gen)
+      (values (gen) gen)
+      (let ([val (gen)])
+        (if (generator-empty? gen)
+            (values val
+                    (generator () val))
+            (values val
+                    (generator-cons val gen))))))
 
 (define (generator-map f gen)
   (generator ()

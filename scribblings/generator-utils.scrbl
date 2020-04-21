@@ -50,7 +50,7 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
   ]
 }
 
-@defthing[gen:producer any/c]{
+@defthing[gen:generator any/c]{
 
  A @tech/reference{generic interface} for generators.
 
@@ -61,30 +61,30 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
       #:property prop:procedure
       (λ (self)
         ((api-reader-source self)))
-      #:methods gen:producer
-      [(define/generic -producer-state producer-state)
-       (define (producer-state st)
-         (-producer-state (api-reader-source source)))])
+      #:methods gen:generator
+      [(define/generic -generator-state generator-state)
+       (define (generator-state st)
+         (-generator-state (api-reader-source source)))])
     (define g (api-reader (make-generator 1 2 3)))
     (g)
     (->list g)
   ]
 
-@defproc[(producer? [v any/c])
+@defproc[(generator? [v any/c])
          boolean?]{
 
  Predicate to check if a value is a generator.
 
 @examples[
     #:eval eval-for-docs
-    (producer? 3)
-    (producer? (generator-cons 1 (generator-null)))
+    (generator? 3)
+    (generator? (generator-cons 1 (generator-null)))
   ]
 }
 
  To implement this interface for custom types, the following method needs to be implemented:
 
- @defproc[(producer-state [v producer?])
+ @defproc[(generator-state [v generator?])
           [symbol? (one-of/c 'fresh 'suspended 'running 'done)]]{
 
  Describes the state of the generator. The implementation should mirror @racket[generator-state].
