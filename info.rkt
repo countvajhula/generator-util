@@ -8,7 +8,7 @@
                      "racket-doc"
                      "rackunit-lib"
                      "sandbox-lib"))
-(define scribblings '(("scribblings/generator-utils.scrbl" (multi-page))))
+(define scribblings '(("scribblings/generator-utils.scrbl" ())))
 (define clean '("compiled" "doc"))
 (define pkg-desc "Useful utilities for working with generators")
 (define version "0.0")

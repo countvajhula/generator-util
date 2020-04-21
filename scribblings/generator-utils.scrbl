@@ -3,8 +3,10 @@
          scribble-abbrevs/manual
          scribble/example
          racket/sandbox
-         @for-label[racket
-                    racket/generator]]
+         @for-label[(except-in racket sequence?)
+                    (only-in racket (sequence? b:sequence?))
+                    racket/generator
+                    (only-in data/collection sequence?)]]
 
 @(define eval-for-docs
   (parameterize ([sandbox-output 'string]
@@ -27,6 +29,8 @@
 Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{generators}.
 
 @defmodule[generator-utils]
+
+@section{Primitives}
 
 @deftogether[(
 @defproc[(generator-null [return any/c (void)])
@@ -51,49 +55,6 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
     (g)
     (->list g)
   ]
-}
-
-@defthing[gen:generator any/c]{
-
- A @tech/reference{generic interface} for generators, that wraps built-in generators but also enables providing generator semantics in custom types.
-
- @examples[
-    #:eval eval-for-docs
-    (struct api-reader (source)
-      #:transparent
-      #:property prop:procedure
-      (λ (self)
-        ((api-reader-source self)))
-      #:methods gen:generator
-      [(define/generic -generator-state generator-state)
-       (define (generator-state st)
-         (-generator-state (api-reader-source source)))])
-    (define g (api-reader (make-generator 1 2 3)))
-    (g)
-    (->list g)
-  ]
-
-@defproc[(generator? [v any/c])
-         boolean?]{
-
- Predicate to check if a value is a generator.
-
-@examples[
-    #:eval eval-for-docs
-    (generator? 3)
-    (generator? (generator-cons 1 (generator-null)))
-  ]
-}
-
- To implement this interface for custom types, the following method needs to be implemented:
-
- @defproc[(generator-state [v generator?])
-          [symbol? (one-of/c 'fresh 'suspended 'running 'done)]]{
-
- Describes the state of the generator. The implementation should mirror @racket[generator-state].
-
- }
-
 }
 
 @deftogether[(
@@ -134,6 +95,8 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
 	(g)
   ]
 }
+
+@section{Utilities}
 
 @defproc[(generator-map [f (-> any/c any/c)] [g generator?])
          generator?]{
@@ -228,5 +191,64 @@ Yields a fresh generator whose values are the "flattened" elements of @racket[g]
 	(g)
 	(g)
 	(g)
+  ]
+}
+
+@section{Interface}
+
+@defthing[gen:generator any/c]{
+
+ A @tech/reference{generic interface} for generators, that wraps built-in generators but also enables providing generator semantics in custom types.
+
+ @examples[
+    #:eval eval-for-docs
+    (struct api-reader (source)
+      #:transparent
+      #:property prop:procedure
+      (λ (self)
+        ((api-reader-source self)))
+      #:methods gen:generator
+      [(define/generic -generator-state generator-state)
+       (define (generator-state st)
+         (-generator-state (api-reader-source source)))])
+    (define g (api-reader (make-generator 1 2 3)))
+    (g)
+    (->list g)
+  ]
+
+ To implement this interface for custom types, the following method needs to be implemented:
+
+ @defproc[(generator-state [v generator?])
+          [symbol? (one-of/c 'fresh 'suspended 'running 'done)]]{
+
+ Describes the state of the generator. The implementation should mirror @racket[generator-state].
+
+ }
+
+@defproc[(generator? [v any/c])
+         boolean?]{
+
+ Predicate to check if a value is a generator.
+
+@examples[
+    #:eval eval-for-docs
+    (generator? 3)
+    (generator? (generator-cons 1 (generator-null)))
+  ]
+}
+
+}
+
+@defproc[(in-producer [g generator?]
+                      [stop any/c undefined]
+                      [v any/c] ...)
+         sequence?]{
+
+Analogous to @racket[in-producer], but yields a data/collection @racket[sequence?] rather than a built-in @racketlink[b:sequence?]{sequence?}.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (make-generator 1 2 3))
+	(->list (in-producer g (void)))
   ]
 }
