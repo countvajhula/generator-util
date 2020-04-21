@@ -38,6 +38,10 @@
           [make-generator (->* ()
                                #:rest (listof any/c)
                                generator?)]
+          [generator-empty? (-> generator?
+                                (values boolean? generator?))]
+          [generator-done? (-> generator?
+                               boolean?)]
           [generator-peek (-> generator?
                               (values any/c generator?))]
           [generator-map (-> (-> any/c any/c)
@@ -73,11 +77,11 @@
   (generator ()
     (yield v)
     (let ([cur (gen)])
-      (if (generator-empty? gen)
+      (if (generator-done? gen)
           cur
           (let loop ([cur cur]
                      [next (gen)])
-            (if (generator-empty? gen)
+            (if (generator-done? gen)
                 (begin (yield cur)
                        (gen))
                 (begin (yield cur)
@@ -88,16 +92,29 @@
     ['() (generator-null)]
     [(cons v vs) (generator-cons v (apply make-generator vs))]))
 (define (generator-empty? gen)
+  (if (generator-done? gen)
+      (values #t gen)
+      (let ([val (gen)])
+        (if (generator-done? gen)
+            (values #t
+                    (generator () val))
+            (values #f
+                    (generator-cons val gen))))))
+
+(define (generator-done? gen)
   (= (generator-state gen)
      'done))
 
 (define (generator-peek gen)
-  (if (generator-empty? gen)
-      (values (gen) gen)
+  (if (generator-done? gen)
+      (raise-argument-error 'generator-peek
+                            "Non-empty generator in a non-terminal state."
+                            gen)
       (let ([val (gen)])
-        (if (generator-empty? gen)
-            (values val
-                    (generator () val))
+        (if (generator-done? gen)
+            (raise-argument-error 'generator-peek
+                            "Non-empty generator in a non-terminal state."
+                            gen)
             (values val
                     (generator-cons val gen))))))
 
@@ -105,7 +122,7 @@
   (generator ()
     (let loop ([cur (gen)]
                [next (gen)])
-      (if (generator-empty? gen)
+      (if (generator-done? gen)
           (begin (yield (f cur))
                  (let ([result (gen)])
                    (unless (void? result)
@@ -117,7 +134,7 @@
   (generator ()
     (let loop ([cur (gen)]
                [next (gen)])
-      (if (generator-empty? gen)
+      (if (generator-done? gen)
           (begin (when (pred cur)
                    (yield cur))
                  (let ([result (gen)])
@@ -130,37 +147,40 @@
 
 (define (generator-fold f gen [base undefined] #:order [order 'abb])
   (generator ()
-    (let-values ([(head gen) (generator-peek gen)])
-      (let ([base (if (undefined? base)
-                      ((id f) head)
-                      base)]
-            [f (if (= order 'abb)
-                   f
-                   (flip f))])
-        (let loop ([acc base]
-                   [cur (gen)]
-                   [next (gen)])
-          (let ([acc (f cur acc)])
-            (if (generator-empty? gen)
-                (begin (yield acc)
-                       (let ([result (gen)])
-                         (unless (void? result)
-                           (yield (f result acc)))))
-                (begin (yield acc)
-                       (loop acc next (gen))))))))))
+             (let-values ([(is-empty? gen) (generator-empty? gen)])
+               (if is-empty?
+                   base
+                   (let-values ([(head gen) (generator-peek gen)])
+                     (let ([base (if (undefined? base)
+                                     ((id f) head)
+                                     base)]
+                           [f (if (= order 'abb)
+                                  f
+                                  (flip f))])
+                       (let loop ([acc base]
+                                  [cur (gen)]
+                                  [next (gen)])
+                         (let ([acc (f cur acc)])
+                           (if (generator-done? gen)
+                               (begin (yield acc)
+                                      (let ([result (gen)])
+                                        (unless (void? result)
+                                          (yield (f result acc)))))
+                               (begin (yield acc)
+                                      (loop acc next (gen))))))))))))
 
 (define (generator-append a b)
   (generator ()
     (let loop ([cur (a)]
                [next (a)])
-      (if (generator-empty? a)
+      (if (generator-done? a)
           (begin (yield cur)
                  (a))
           (begin (yield cur)
                  (loop next (a)))))
     (let loop ([cur (b)]
                [next (b)])
-      (if (generator-empty? b)
+      (if (generator-done? b)
           (begin (yield cur)
                  (b))
           (begin (yield cur)
@@ -180,7 +200,7 @@
   (generator ()
     (let loop ([cur (gen)]
                [next (gen)])
-      (if (generator-empty? gen)
+      (if (generator-done? gen)
           (begin (flatten-one-level cur)
                  (let ([result (gen)])
                    (unless (void? result)
@@ -189,7 +209,10 @@
                  (loop next (gen)))))))
 
 (define (generator-flatten gen)
-  (let-values ([(v gen) (generator-peek gen)])
-    (if (sequence? v)
-        (generator-flatten (generator-join gen))
-        gen)))
+  (let-values ([(is-empty? gen) (generator-empty? gen)])
+    (if is-empty?
+        gen
+        (let-values ([(v gen) (generator-peek gen)])
+          (if (sequence? v)
+              (generator-flatten (generator-join gen))
+              gen)))))

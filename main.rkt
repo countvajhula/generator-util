@@ -4,6 +4,8 @@
   (require rackunit
            racket/stream
            racket/generator
+           (only-in racket/function
+                    thunk)
            (except-in data/collection
                       foldl
                       foldl/steps
@@ -83,16 +85,16 @@
   (let-values ([(head gen) (generator-peek (->generator (list 1 2 3)))])
     (check-equal? head 1)
     (check-equal? (->list gen) '(1 2 3)))
-  (let-values ([(head gen) (generator-peek (generator () (void)))])
-    ;; note: generator-peek doesn't differentiate between a return value
-    ;; and a yielded value; arguably, neither does a generator, i.e. the
-    ;; first time a return value is returned, it is treated as "the final"
-    ;; yielded value since the generator's state is still "suspended" prior
-    ;; to that final invocation, rather than "done"
-    (check-equal? head (void))
-    (check-equal? (generator-state gen) 'fresh)
+  (check-exn exn:fail? (thunk (generator-peek (generator () (void)))))
+  (let-values ([(is-empty? gen) (generator-empty? (make-generator))])
+    (check-true is-empty?))
+  (let-values ([(is-empty? gen) (generator-empty? (make-generator 1))])
+    (check-false is-empty?))
+  (let ([gen (make-generator)])
     (gen)
-    (check-equal? (generator-state gen) 'done)))
+    (check-true (generator-done? gen))
+    (let-values ([(is-empty? gen) (generator-empty? gen)])
+      (check-true (generator-done? gen)))))
 
 (module+ main
   ;; (Optional) main submodule. Put code here if you need it to be executed when
