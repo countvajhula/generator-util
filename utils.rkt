@@ -87,10 +87,11 @@
                 (begin (yield cur)
                        (loop next (gen)))))))))
 
-(define (make-generator . vals)
+(define (make-generator #:return [return (void)] . vals)
   (match vals
-    ['() (generator-null)]
-    [(cons v vs) (generator-cons v (apply make-generator vs))]))
+    ['() (generator-null return)]
+    [(cons v vs) (generator-cons v (apply make-generator #:return return vs))]))
+
 (define (generator-empty? gen)
   (if (generator-done? gen)
       (values #t gen)
