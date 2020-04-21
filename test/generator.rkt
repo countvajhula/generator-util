@@ -1,9 +1,12 @@
 #lang racket/base
 
 (module+ test
-  (require rackunit
+  (require data/generator
+           rackunit
            racket/stream
-           racket/generator
+           (except-in racket/generator
+                      generator?
+                      generator-state)
            (only-in racket/function
                     thunk)
            (except-in data/collection
@@ -12,17 +15,7 @@
                       append)
            relation))
 
-;; Code here
-
-(require "data/generator.rkt")
-
-(provide (all-from-out "data/generator.rkt"))
-
 (module+ test
-  ;; Any code in this `test` submodule runs when this file is run using DrRacket
-  ;; or with `raco test`. The code here does not run when this file is
-  ;; required by another module.
-
   (check-equal? (->list (generator-cons 4 (->generator (list 1 2 3)))) '(4 1 2 3))
   (let ([g (generator-cons 4 (->generator (list 1)))])
     (g)
@@ -95,18 +88,3 @@
     (check-true (generator-done? gen))
     (let-values ([(is-empty? gen) (generator-empty? gen)])
       (check-true (generator-done? gen)))))
-
-(module+ main
-  ;; (Optional) main submodule. Put code here if you need it to be executed when
-  ;; this file is run using DrRacket or the `racket` executable.  The code here
-  ;; does not run when this file is required by another module. Documentation:
-  ;; http://docs.racket-lang.org/guide/Module_Syntax.html#%28part._main-and-test%29
-
-  (require racket/cmdline)
-  (define who (box "world"))
-  (command-line
-    #:program "my-program"
-    #:once-each
-    [("-n" "--name") name "Who to say hello to" (set-box! who name)]
-    #:args ()
-    (printf "hello ~a~n" (unbox who))))
