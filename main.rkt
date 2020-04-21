@@ -14,9 +14,9 @@
 
 ;; Code here
 
-(require "utils.rkt")
+(require "data/generator.rkt")
 
-(provide (all-from-out "utils.rkt"))
+(provide (all-from-out "data/generator.rkt"))
 
 (module+ test
   ;; Any code in this `test` submodule runs when this file is run using DrRacket

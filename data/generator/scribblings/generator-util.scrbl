@@ -14,7 +14,7 @@
                  [sandbox-memory-limit #f])
                  (make-evaluator 'racket/base
                                  '(require relation)
-                                 '(require generator-utils)
+                                 '(require data/generator)
                                  '(require racket/set)
                                  '(require racket/generic)
                                  '(require (prefix-in b: racket/generator))
@@ -26,9 +26,9 @@
 @title{Generator Utilities}
 @author{Siddhartha Kasivajhula}
 
-Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{generators}.
+@defmodule[data/generator]
 
-@defmodule[generator-utils]
+Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{generators}.
 
 @section{Primitives}
 
@@ -233,6 +233,7 @@ Yields a fresh generator whose values are the "flattened" elements of @racket[g]
 @examples[
     #:eval eval-for-docs
     (generator? 3)
+    (generator? (generator () (void)))
     (generator? (generator-cons 1 (generator-null)))
   ]
 }

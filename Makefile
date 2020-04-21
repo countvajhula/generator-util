@@ -1,5 +1,5 @@
 # Adapted from: http://www.greghendershott.com/2017/04/racket-makefiles.html
-PACKAGE-NAME=generator-utils
+PACKAGE-NAME=generator-util
 
 DEPS-FLAGS=--check-pkg-deps --unused-pkg-deps
 
@@ -48,7 +48,7 @@ clean:
 # does the equivalent of make setup, this tries to do as little as
 # possible except checking deps.
 check-deps:
-	raco setup --no-docs $(DEPS-FLAGS) $(PACKAGE-NAME)
+	raco setup --no-docs $(DEPS-FLAGS) --pkgs $(PACKAGE-NAME)
 
 # Suitable for both day-to-day dev and CI
 test:
