@@ -194,6 +194,20 @@ Yields a fresh generator whose values are the "flattened" elements of @racket[g]
   ]
 }
 
+@defproc[(yield-from [g generator?])
+         any]{
+
+Yield all values from a provided generator. This should only be used inside a generator.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (generator () (yield-from (make-generator 1 2 3))))
+    (g)
+    (g)
+    (g)
+  ]
+}
+
 @section{Interface}
 
 @defthing[gen:generator any/c]{

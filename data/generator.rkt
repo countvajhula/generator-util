@@ -51,10 +51,13 @@
           [generator-fold (->* ((-> any/c any/c any/c) generator?)
                                (any/c #:order (one-of/c 'abb 'bab))
                                generator?)]
+          [yield-from (-> generator? any)]
           [generator-append (-> generator? generator? generator?)]
           [generator-join (-> generator? generator?)]
           [generator-flatten (-> generator? generator?)]))
 
+;; TODO: these should be removed once the relevant libraries
+;; are available for use as dependencies
 (define (undefined? v)
   (eq? v undefined))
 
@@ -180,22 +183,21 @@
                                (begin (yield acc)
                                       (loop acc next (gen))))))))))))
 
+(define (yield-from g)
+  (if (generator-done? g)
+      (raise-argument-error 'yield-from
+                            "Generator in a non-terminal state"
+                            g)
+      (let ([v (g)])
+        (if (generator-done? g)
+            v
+            (begin (yield v)
+                   (yield-from g))))))
+
 (define (generator-append a b)
   (generator ()
-    (let loop ([cur (a)]
-               [next (a)])
-      (if (generator-done? a)
-          (begin (yield cur)
-                 (a))
-          (begin (yield cur)
-                 (loop next (a)))))
-    (let loop ([cur (b)]
-               [next (b)])
-      (if (generator-done? b)
-          (begin (yield cur)
-                 (b))
-          (begin (yield cur)
-                 (loop next (b)))))))
+    (yield-from a)
+    (yield-from b)))
 
 (define (flatten-one-level vs)
   (if (sequence? vs)
