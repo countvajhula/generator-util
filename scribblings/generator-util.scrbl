@@ -3,10 +3,11 @@
          scribble-abbrevs/manual
          scribble/example
          racket/sandbox
-         @for-label[(except-in racket sequence?)
-                    (only-in racket (sequence? b:sequence?))
-                    racket/generator
-                    (only-in data/collection sequence?)]]
+         @for-label[(rename-in racket (sequence? b:sequence?) (in-producer b:in-producer))
+                    (rename-in racket/generator (generator? b:generator?) (generator-state b:generator-state))
+                    generator-util
+                    (only-in data/collection sequence?)
+                    (only-in relation ->list fold)]]
 
 @(define eval-for-docs
   (parameterize ([sandbox-output 'string]
@@ -29,6 +30,10 @@
 @defmodule[generator-util]
 
 Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{generators}.
+
+This module provides general-purpose utilities to achieve standard sequence-style transformations with generators without losing the laziness and constant-memory guarantees that generators provide.
+
+@elemtag["coroutines"]{These utilities are not suitable for use in all cases.} In particular, they are not suitable for use with coroutines -- i.e. in cases where there is bidirectional communication with a generator. Some of the utilities below wrap underlying generators with intermediary ones, and values sent to them are not conveyed to the underlying generators.
 
 @section{Primitives}
 
@@ -66,7 +71,7 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
 
  Predicates to assert whether a generator is "empty" or "done." @racket[generator-empty?] is a statement about the "contents" of the generator, whereas @racket[generator-done?] is a statement about the "state" of the generator. This distinction is made because Racket generators evaluate to two different kinds of values -- first, the values that are @racketlink[yield]{yielded} from within the generator, and second, the return value of the generator which is not explicitly yielded. For the purposes of this interface, the yielded values are treated as the contents of the generator. Thus, if a generator yields no further values but nevertheless evaluates to a nontrivial return value, it is still considered empty. Explicitly, @racket[generator-done?] is equivalent to @racket[(eq? 'done (generator-state g))]. A generator that has exhausted all of its values but has not yet evaluated its return value is @emph{empty} but not @emph{done}.
 
- @racket[generator-empty?] returns both a boolean value indicating whether the generator is empty or not, as well as a fresh generator intended to supplant the original generator in the calling context. This is necessary because checking for emptiness requires invoking the generator to inspect the first element, which mutates the original generator. The returned generator is equivalent to the original generator prior to the mutation.
+ @racket[generator-empty?] returns both a boolean value indicating whether the generator is empty or not, as well as a fresh generator intended to supplant the original generator in the calling context. This is necessary because checking for emptiness requires invoking the generator to inspect the first element, which mutates the original generator. The returned generator is equivalent to the original generator prior to the mutation, modulo the @elemref["coroutines"]{aforementioned caveat} about coroutines.
 
 @examples[
     #:eval eval-for-docs
@@ -83,7 +88,7 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
 @defproc[(generator-peek [g generator?])
          (values any/c generator?)]{
 
- "Peek" at the first value in the generator without modifying it. Of course, inspecting the first element in a generator must necessarily modify it. To preserve the illusion that no mutation has taken place, a generator equivalent to the original one prior to mutation is returned along with the peeked-at value. This returned generator is expected to be used in place of the original one in the calling context as it will be functionally equivalent to the original one.
+ "Peek" at the first value in the generator without modifying it. Of course, inspecting the first element in a generator must necessarily modify it. To preserve the illusion that no mutation has taken place, a generator equivalent to the original one prior to mutation is returned along with the peeked-at value. This returned generator is expected to be used in place of the original one in the calling context as it will be functionally equivalent to the original one, modulo the @elemref["coroutines"]{aforementioned caveat} about coroutines. Additionally, peeking does not protect against invocation side-effects. If invoking @racket[g] results in a side-effect, that would still happen if you peek at it. But it won't happen a second time since the replacement generator only includes the return value from the original invocation, and not the side effect.
 
 @examples[
     #:eval eval-for-docs
@@ -235,14 +240,14 @@ Yield all values from a provided generator. This should only be used inside a ge
  @defproc[(generator-state [v generator?])
           [symbol? (one-of/c 'fresh 'suspended 'running 'done)]]{
 
- Describes the state of the generator. The implementation should mirror @racket[generator-state].
+ Describes the state of the generator. The implementation should mirror @racketlink[b:generator-state]{generator-state}.
 
  }
 
 @defproc[(generator? [v any/c])
          boolean?]{
 
- Predicate to check if a value is a generator.
+ Predicate to check if a value is a generator. Like @racketlink[b:generator?]{generator?} but also recognizes instances of @racket[gen:generator].
 
 @examples[
     #:eval eval-for-docs
@@ -259,7 +264,7 @@ Yield all values from a provided generator. This should only be used inside a ge
                       [v any/c] ...)
          sequence?]{
 
-Analogous to @racket[in-producer], but yields a data/collection @racket[sequence?] rather than a built-in @racketlink[b:sequence?]{sequence?}.
+Analogous to @racketlink[b:in-producer]{in-producer}, but yields a data/collection @racket[sequence?] rather than a built-in @racketlink[b:sequence?]{sequence?}.
 
 @examples[
     #:eval eval-for-docs
