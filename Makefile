@@ -1,6 +1,6 @@
 # Adapted from: http://www.greghendershott.com/2017/04/racket-makefiles.html
 PACKAGE-NAME=generator-util
-COLLECTION-NAME=data/generator
+COLLECTION-NAME=$(PACKAGE-NAME)
 
 DEPS-FLAGS=--check-pkg-deps --unused-pkg-deps
 

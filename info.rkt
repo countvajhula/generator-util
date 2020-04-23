@@ -1,5 +1,5 @@
 #lang info
-(define collection 'multi)
+(define collection "generator-util")
 (define deps '("base"
                "collections-lib"
                "relation"))
@@ -9,8 +9,8 @@
                      "rackunit-lib"
                      "sandbox-lib"
                      "collections-doc"))
-(define compile-omit-paths '("dev" "tests"))
-(define test-include-paths '("tests"))
+(define scribblings '(("scribblings/generator-util.scrbl" ())))
+(define compile-omit-paths '("dev"))
 (define clean '("compiled" "doc"))
 (define pkg-desc "Useful utilities for working with generators")
 (define version "0.0")

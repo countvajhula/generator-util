@@ -14,7 +14,7 @@
                  [sandbox-memory-limit #f])
                  (make-evaluator 'racket/base
                                  '(require relation)
-                                 '(require data/generator)
+                                 '(require generator-util)
                                  '(require racket/set)
                                  '(require racket/generic)
                                  '(require (prefix-in b: racket/generator))
@@ -26,7 +26,7 @@
 @title{Generator Utilities}
 @author{Siddhartha Kasivajhula}
 
-@defmodule[data/generator]
+@defmodule[generator-util]
 
 Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{generators}.
 
