@@ -8,7 +8,8 @@
                   generator
                   yield)
          (only-in racket/function
-                  const)
+                  const
+                  negate)
          racket/generic
          racket/undefined
          (except-in data/collection
@@ -74,6 +75,8 @@
 ;; are available for use as dependencies
 (define (undefined? v)
   (eq? v undefined))
+
+(define !! negate)
 
 (define (take-while pred seq)
   (if (empty? seq)
