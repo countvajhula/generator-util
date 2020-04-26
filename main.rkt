@@ -9,6 +9,8 @@
                   yield)
          (only-in racket/function
                   const
+                  curry
+                  curryr
                   negate)
          racket/generic
          racket/undefined
