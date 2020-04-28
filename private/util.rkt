@@ -4,7 +4,12 @@
          racket/function
          racket/stream
          racket/match
-         data/collection)
+         (except-in data/collection
+                    foldl
+                    foldl/steps
+                    append
+                    index-of)
+         relation)
 
 (provide unthunk
          undefined?
