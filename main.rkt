@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/contract
+(require (prefix-in b: racket/base)
+         racket/contract
          racket/stream
          racket/match
          (prefix-in b: racket/generator)
@@ -20,6 +21,8 @@
                     append
                     index-of)
          relation)
+
+(require "private/util.rkt")
 
 (provide gen:generator
          generator/c
@@ -72,22 +75,6 @@
                       foldl/steps
                       append)
            relation))
-
-;; TODO: these should be removed once the relevant libraries
-;; are available for use as dependencies
-(define (undefined? v)
-  (eq? v undefined))
-
-(define !! negate)
-
-(define (take-while pred seq)
-  (if (empty? seq)
-      (stream)
-      (let ([v (first seq)]
-            [vs (rest seq)])
-        (if (pred v)
-            (stream-cons v (take-while pred vs))
-            null))))
 
 (define-generics generator
   (generator-state generator)
@@ -180,27 +167,27 @@
 
 (define (generator-fold f gen [base undefined] #:order [order 'abb])
   (generator ()
-             (let-values ([(is-empty? gen) (generator-empty? gen)])
-               (if is-empty?
-                   base
-                   (let-values ([(head gen) (generator-peek gen)])
-                     (let ([base (if (undefined? base)
-                                     ((id f) head)
-                                     base)]
-                           [f (if (= order 'abb)
-                                  f
-                                  (flip f))])
-                       (let loop ([acc base]
-                                  [cur (gen)]
-                                  [next (gen)])
-                         (let ([acc (f cur acc)])
-                           (if (generator-done? gen)
-                               (begin (yield acc)
-                                      (let ([result (gen)])
-                                        (unless (void? result)
-                                          (yield (f result acc)))))
-                               (begin (yield acc)
-                                      (loop acc next (gen))))))))))))
+    (let-values ([(is-empty? gen) (generator-empty? gen)])
+      (if is-empty?
+          base
+          (let-values ([(head gen) (generator-peek gen)])
+            (let ([base (if (undefined? base)
+                            ((id f) head)
+                            base)]
+                  [f (if (= order 'abb)
+                         f
+                         (flip f))])
+              (let loop ([acc base]
+                         [cur (gen)]
+                         [next (gen)])
+                (let ([acc (f cur acc)])
+                  (if (generator-done? gen)
+                      (begin (yield acc)
+                             (let ([result (gen)])
+                               (unless (void? result)
+                                 (yield (f result acc)))))
+                      (begin (yield acc)
+                             (loop acc next (gen))))))))))))
 
 (define (yield-from g)
   (if (generator-done? g)
