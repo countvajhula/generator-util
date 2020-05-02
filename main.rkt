@@ -59,6 +59,8 @@
                                generator?)]
           [yield-from (-> generator? any)]
           [generator-append (-> generator? generator? generator?)]
+          [generator-zip-with (-> procedure? generator? ... generator?)]
+          [generator-zip (-> generator? ... generator?)]
           [generator-join (-> generator? generator?)]
           [generator-flatten (-> generator? generator?)]))
 
@@ -205,6 +207,19 @@
     (yield-from a)
     (yield-from b)))
 
+(define (generator-zip-with f . gs)
+  (generator ()
+    (let loop ([curs (b:map (curryr apply null) gs)]
+               [states (b:map generator-state gs)])
+      (unless (any? (b:map (curry = 'done)
+                           states))
+        (yield (apply f curs))
+        (loop (b:map (curryr apply null) gs)
+              (b:map generator-state gs))))))
+
+(define (generator-zip . gs)
+  (apply generator-zip-with list gs))
+
 (define (flatten-one-level vs)
   (if (sequence? vs)
       (for-each (λ (v)
@@ -264,6 +279,14 @@
   (check-equal? (->list (generator () (yield-from (make-generator 1)))) '(1))
   (check-equal? (->list (generator-append (->generator (list 1 2 3)) (->generator (list 4 5 6)))) '(1 2 3 4 5 6))
   (check-equal? (->list (generator-append (->generator (list 1)) (->generator (list 4)))) '(1 4))
+  (check-equal? (->list (generator-zip (->generator (list 1)) (->generator (list 4)))) '((1 4)))
+  (check-equal? (->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b 'c)))) '((1 a) (2 b) (3 c)))
+  (check-equal? (->list (generator-zip (->generator (list)) (->generator (list)))) '())
+  (check-equal? (->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a)))) '((1 a)))
+  (check-equal? (->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b)) (->generator (list 'A 'B 'C)))) '((1 a A) (2 b B)))
+  (check-equal? (->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2 3)))) '(2 4 6))
+  (check-equal? (->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2)))) '(2 4))
+  (check-equal? (->list (generator-zip-with + (->generator (list)) (->generator (list)))) '())
   (check-equal? (->list (in-producer (->generator (list 1 2 3 4 (void) 5 6))
                                      (void)))
                 '(1 2 3 4))

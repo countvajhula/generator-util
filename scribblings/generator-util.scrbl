@@ -169,6 +169,35 @@ Analogous to @racket[append], yields a fresh generator whose values are the elem
   ]
 }
 
+@deftogether[(
+@defproc[(generator-zip [g generator?]
+                        ...)
+         generator?]
+@defproc[(generator-zip-with [f procedure?]
+                             [g generator?]
+                             ...)
+         generator?]
+	 )]{
+
+Analogous to @racket[zip-with], @racket[generator-zip-with] yields a fresh generator whose values are the elements of the input generators combined using the function @racket[f]. @racket[f] must accept a number of arguments equal to the number of provided generators. @racket[generator-zip] simply combines the generator values using @racket[list].
+
+@examples[
+    #:eval eval-for-docs
+	(define a (make-generator 1 2))
+	(define b (make-generator 'a 'b))
+	(define c (make-generator 'A 'B))
+	(define g (generator-zip a b c))
+	(g)
+	(g)
+	(define a (make-generator 1 2))
+	(define b (make-generator 1 2))
+	(define c (make-generator 1 2))
+	(define g (generator-zip-with + a b c))
+	(g)
+	(g)
+  ]
+}
+
 @defproc[(generator-join [g generator?])
          generator?]{
 
@@ -264,7 +293,7 @@ Yield all values from a provided generator. This should only be used inside a ge
                       [v any/c] ...)
          sequence?]{
 
-Analogous to @racketlink[b:in-producer]{in-producer}, but yields a data/collection @racket[sequence?] rather than a built-in @racketlink[b:sequence?]{sequence?}.
+ Similar to @racketlink[b:in-producer]{in-producer}, but yields a data/collection @racket[sequence?] rather than a built-in @racketlink[b:sequence?]{sequence?}.
 
 @examples[
     #:eval eval-for-docs
