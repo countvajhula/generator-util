@@ -229,15 +229,18 @@
 
 (define (generator-join gen)
   (generator ()
-    (let loop ([cur (gen)]
-               [next (gen)])
+    (let ([cur (gen)])
       (if (generator-done? gen)
-          (begin (flatten-one-level cur)
-                 (let ([result (gen)])
-                   (unless (void? result)
-                     (flatten-one-level result))))
-          (begin (flatten-one-level cur)
-                 (loop next (gen)))))))
+          cur
+          (let loop ([cur cur]
+                     [next (gen)])
+            (if (generator-done? gen)
+                (begin (flatten-one-level cur)
+                       (let ([result (gen)])
+                         (unless (void? result)
+                           (flatten-one-level result))))
+                (begin (flatten-one-level cur)
+                       (loop next (gen)))))))))
 
 (define (generator-flatten gen)
   (let-values ([(is-empty? gen) (generator-empty? gen)])
@@ -299,6 +302,8 @@
                 '(1 2 3 4 5 6))
   (check-equal? (->list (generator-join (->generator (list (list 1 2 3 4 5 6)))))
                 '(1 2 3 4 5 6))
+  (check-equal? (->list (generator-join (make-generator)))
+                '())
   (check-equal? (->list (generator-flatten (->generator (list (list 1 2) (list 3 4) (list 5) (list 6)))))
                 '(1 2 3 4 5 6))
   (check-equal? (->list (generator-flatten (->generator (list (list 1 2 3 4 5 6)))))
