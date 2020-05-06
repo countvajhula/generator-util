@@ -61,6 +61,7 @@
           [generator-append (-> generator? generator? generator?)]
           [generator-zip-with (-> procedure? generator? ... generator?)]
           [generator-zip (-> generator? ... generator?)]
+          [generator-interleave (-> generator? ... generator?)]
           [generator-join (-> generator? generator?)]
           [generator-flatten (-> generator? generator?)]))
 
@@ -217,6 +218,19 @@
 (define (generator-zip . gs)
   (apply generator-zip-with list gs))
 
+(define (generator-interleave . gs)
+  (generator ()
+    (unless (empty? gs)
+      (let loop ([remaining-gs gs])
+        (if (empty? remaining-gs)
+            (loop gs)
+            (let ([first-g (first remaining-gs)])
+              (let ([cur (first-g)])
+                (if (generator-done? first-g)
+                   cur
+                   (begin (yield cur)
+                          (loop (rest remaining-gs)))))))))))
+
 (define (flatten-one-level vs)
   (if (sequence? vs)
       (for-each (λ (v)
@@ -287,6 +301,13 @@
   (check-equal? (->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2 3)))) '(2 4 6))
   (check-equal? (->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2)))) '(2 4))
   (check-equal? (->list (generator-zip-with + (->generator (list)) (->generator (list)))) '())
+  (check-equal? (->list (generator-interleave (make-generator 1 2 3) (make-generator 4 5 6))) '(1 4 2 5 3 6))
+  (check-equal? (->list (generator-interleave (make-generator 1) (make-generator 2))) '(1 2))
+  (check-equal? (->list (generator-interleave (make-generator 1 2) (make-generator 3))) '(1 3 2))
+  (check-equal? (->list (generator-interleave (make-generator 1) (make-generator 2 3))) '(1 2))
+  (check-equal? (->list (generator-interleave (make-generator 1) (make-generator))) '(1))
+  (check-equal? (->list (generator-interleave (make-generator) (make-generator 1))) '())
+  (check-equal? (->list (generator-interleave (make-generator) (make-generator))) '())
   (check-equal? (->list (in-producer (->generator (list 1 2 3 4 (void) 5 6))
                                      (void)))
                 '(1 2 3 4))

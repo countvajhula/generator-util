@@ -181,7 +181,7 @@ Analogous to @racket[append], yields a fresh generator whose values are the elem
          generator?]
 	 )]{
 
-Analogous to @racket[zip-with], @racket[generator-zip-with] yields a fresh generator whose values are the elements of the input generators combined using the function @racket[f]. @racket[f] must accept a number of arguments equal to the number of provided generators. @racket[generator-zip] simply combines the generator values using @racket[list].
+Analogous to @racket[zip-with], @racket[generator-zip-with] yields a fresh generator whose values are the elements of the input generators combined using the function @racket[f]. @racket[f] must accept a number of arguments equal to the number of provided generators. @racket[generator-zip] simply combines the generator values using @racket[list]. The generation stops when one of the input generators runs out of values.
 
 @examples[
     #:eval eval-for-docs
@@ -195,6 +195,24 @@ Analogous to @racket[zip-with], @racket[generator-zip-with] yields a fresh gener
 	(define b (make-generator 1 2))
 	(define c (make-generator 1 2))
 	(define g (generator-zip-with + a b c))
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-interleave [g generator?]
+							   ...)
+         generator?]{
+
+Yields a fresh generator whose values are the elements of the input generators taken in turn, one at a time. The generation stops when one of the input generators runs out of values.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (generator-interleave (make-generator 1 2 3) (make-generator 4 5 6)))
+	(g)
+	(g)
+	(g)
+	(g)
 	(g)
 	(g)
   ]
