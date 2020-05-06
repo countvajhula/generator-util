@@ -209,13 +209,10 @@
 
 (define (generator-zip-with f . gs)
   (generator ()
-    (let loop ([curs (b:map (curryr apply null) gs)]
-               [states (b:map generator-state gs)])
-      (unless (any? (b:map (curry = 'done)
-                           states))
+    (let loop ([curs (b:map (curryr apply null) gs)])
+      (unless (any? (b:map generator-done? gs))
         (yield (apply f curs))
-        (loop (b:map (curryr apply null) gs)
-              (b:map generator-state gs))))))
+        (loop (b:map (curryr apply null) gs))))))
 
 (define (generator-zip . gs)
   (apply generator-zip-with list gs))

@@ -33,7 +33,7 @@ Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scr
 
 This module provides general-purpose utilities to achieve standard sequence-style transformations with generators without losing the laziness and constant-memory guarantees that generators provide.
 
-@elemtag["coroutines"]{These utilities are not suitable for use in all cases.} In particular, they are not suitable for use with coroutines -- i.e. in cases where there is bidirectional communication with a generator. Some of the utilities below wrap underlying generators with intermediary ones, and values sent to them are not conveyed to the underlying generators.
+@elemtag["coroutines"]{@bold{Caveat}}: These utilities are not suitable for use with coroutines, i.e. in cases where there is bidirectional communication with a generator. This is because the utilities wrap underlying generators with intermediary ones in some cases, and values sent to them are not conveyed to the underlying generators.
 
 @section{Primitives}
 
@@ -72,6 +72,8 @@ This module provides general-purpose utilities to achieve standard sequence-styl
  Predicates to assert whether a generator is "empty" or "done." @racket[generator-empty?] is a statement about the "contents" of the generator, whereas @racket[generator-done?] is a statement about the "state" of the generator. This distinction is made because Racket generators evaluate to two different kinds of values -- first, the values that are @racketlink[yield]{yielded} from within the generator, and second, the return value of the generator which is not explicitly yielded. For the purposes of this interface, the yielded values are treated as the contents of the generator. Thus, if a generator yields no further values but nevertheless evaluates to a nontrivial return value, it is still considered empty. Explicitly, @racket[generator-done?] is equivalent to @racket[(eq? 'done (generator-state g))]. A generator that has exhausted all of its values but has not yet evaluated its return value is @emph{empty} but not @emph{done}.
 
  @racket[generator-empty?] returns both a boolean value indicating whether the generator is empty or not, as well as a fresh generator intended to supplant the original generator in the calling context. This is necessary because checking for emptiness requires invoking the generator to inspect the first element, which mutates the original generator. The returned generator is equivalent to the original generator prior to the mutation, modulo the @elemref["coroutines"]{aforementioned caveat} about coroutines.
+
+ In general, favor using @racket[generator-done?].
 
 @examples[
     #:eval eval-for-docs
