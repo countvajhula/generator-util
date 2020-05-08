@@ -12,31 +12,13 @@
          relation)
 
 (provide unthunk
-         undefined?
          !!
          flip
-         take-while
-         any?)
-
-(define (orf . args)
-  (match args
-    ['() #f]
-    [(cons v vs)
-     (match vs
-       ['() v]
-       [_ (or v (apply orf vs))])]))
-
-(define any? (curry foldl
-                    orf
-                    #:into #f
-                    #:order 'bab))
+         take-while)
 
 (define (unthunk f . args)
   (λ ignored-args
     (apply f args)))
-
-(define (undefined? v)
-  (eq? v undefined))
 
 (define !! negate)
 

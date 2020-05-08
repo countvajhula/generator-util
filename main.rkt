@@ -11,8 +11,7 @@
          (only-in racket/function
                   const
                   curry
-                  curryr
-                  negate)
+                  curryr)
          racket/generic
          racket/undefined
          (except-in data/collection
