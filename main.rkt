@@ -7,7 +7,8 @@
          (prefix-in b: racket/generator)
          (only-in racket/generator
                   generator
-                  yield)
+                  yield
+                  sequence->repeated-generator)
          (only-in racket/function
                   const
                   curry
@@ -58,6 +59,11 @@
                                generator?)]
           [yield-from (-> generator? any)]
           [generator-append (-> generator? generator? generator?)]
+          [generator-cycle (->* (generator?)
+                                (any/c)
+                                generator?)]
+          [generator-repeat (-> any/c
+                                generator?)]
           [generator-zip-with (-> procedure? generator? ... generator?)]
           [generator-zip (-> generator? ... generator?)]
           [generator-interleave (-> generator? ... generator?)]
@@ -207,6 +213,12 @@
     (yield-from a)
     (yield-from b)))
 
+(define (generator-cycle g [stop (void)])
+  (sequence->repeated-generator (in-producer g stop)))
+
+(define (generator-repeat v)
+  (sequence->repeated-generator (list v)))
+
 (define (generator-zip-with f . gs)
   (generator ()
     (let loop ([curs (b:map (curryr apply null) gs)])
@@ -292,6 +304,10 @@
   (check-equal? (->list (generator () (yield-from (make-generator 1)))) '(1))
   (check-equal? (->list (generator-append (->generator (list 1 2 3)) (->generator (list 4 5 6)))) '(1 2 3 4 5 6))
   (check-equal? (->list (generator-append (->generator (list 1)) (->generator (list 4)))) '(1 4))
+  (check-equal? (->list (take 5 (in-producer (generator-cycle (make-generator 1 2 3))))) '(1 2 3 1 2))
+  (check-equal? (->list (take 5 (in-producer (generator-cycle (make-generator 1))))) '(1 1 1 1 1))
+  (check-equal? (->list (take 3 (in-producer (generator-repeat 5)))) '(5 5 5))
+  (check-equal? (->list (take 3 (in-producer (generator-repeat (void))))) (list (void) (void) (void)))
   (check-equal? (->list (generator-zip (->generator (list 1)) (->generator (list 4)))) '((1 4)))
   (check-equal? (->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b 'c)))) '((1 a) (2 b) (3 c)))
   (check-equal? (->list (generator-zip (->generator (list)) (->generator (list)))) '())

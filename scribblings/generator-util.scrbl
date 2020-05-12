@@ -6,7 +6,7 @@
          @for-label[(rename-in racket (sequence? b:sequence?) (in-producer b:in-producer))
                     (rename-in racket/generator (generator? b:generator?) (generator-state b:generator-state))
                     generator-util
-                    (only-in data/collection sequence?)
+                    (only-in data/collection sequence? cycle repeat)
                     (only-in relation ->list fold)]]
 
 @(define eval-for-docs
@@ -165,6 +165,36 @@ Analogous to @racket[append], yields a fresh generator whose values are the elem
 	(define b (make-generator 3 4))
 	(define g (generator-append a b))
 	(g)
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-cycle [g generator?] [stop any/c (void)])
+         generator?]{
+
+Analogous to @racket[cycle], yields an infinite generator whose values are the elements of @racket[g], repeated when exhausted. If a @racket[stop] value is provided, the elements are drawn from @racket[g] until @racket[stop] is encountered. This utility uses memory proportional to the size of the repeated sequence.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (generator-cycle (make-generator 1 2 3)))
+	(g)
+	(g)
+	(g)
+	(g)
+	(g)
+  ]
+}
+
+@defproc[(generator-repeat [v any/c])
+         generator?]{
+
+Analogous to @racket[repeat], yields an infinite generator whose values are @racket[v] repeated indefinitely.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (generator-repeat 5))
 	(g)
 	(g)
 	(g)
