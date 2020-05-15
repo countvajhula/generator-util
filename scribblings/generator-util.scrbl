@@ -108,7 +108,7 @@ This module provides general-purpose utilities to achieve standard sequence-styl
 @defproc[(generator-map [f (-> any/c any/c)] [g generator?])
          generator?]{
 
-Analogous to @racket[map], yields a fresh generator whose values are the elements of @racket[g] transformed under @racket[f].
+Analogous to @racket[map], returns a fresh generator whose values are the elements of @racket[g] transformed under @racket[f].
 
 @examples[
     #:eval eval-for-docs
@@ -123,7 +123,7 @@ Analogous to @racket[map], yields a fresh generator whose values are the element
 @defproc[(generator-filter [f (-> any/c boolean?)] [g generator?])
          generator?]{
 
-Analogous to @racket[filter], yields a fresh generator whose values are the elements of @racket[g] for which the predicate @racket[f] is true.
+Analogous to @racket[filter], returns a fresh generator whose values are the elements of @racket[g] for which the predicate @racket[f] is true.
 
 @examples[
     #:eval eval-for-docs
@@ -141,7 +141,7 @@ Analogous to @racket[filter], yields a fresh generator whose values are the elem
                          [#:order order (one-of/c 'abb 'bab) 'abb])
          generator?]{
 
-Analogous to @racket[fold], yields a fresh generator whose values are the steps in the aggregation of the elements of @racket[g] under the folding function @racket[f].
+Analogous to @racket[fold], returns a fresh generator whose values are the steps in the aggregation of the elements of @racket[g] under the folding function @racket[f].
 
 @examples[
     #:eval eval-for-docs
@@ -157,7 +157,7 @@ Analogous to @racket[fold], yields a fresh generator whose values are the steps 
 @defproc[(generator-append [a generator?] [b generator?])
          generator?]{
 
-Analogous to @racket[append], yields a fresh generator whose values are the elements of @racket[a] followed by the elements of @racket[b].
+Analogous to @racket[append], returns a fresh generator whose values are the elements of @racket[a] followed by the elements of @racket[b].
 
 @examples[
     #:eval eval-for-docs
@@ -174,7 +174,7 @@ Analogous to @racket[append], yields a fresh generator whose values are the elem
 @defproc[(generator-cycle [g generator?] [stop any/c (void)])
          generator?]{
 
-Analogous to @racket[cycle], yields an infinite generator whose values are the elements of @racket[g], repeated when exhausted. If a @racket[stop] value is provided, the elements are drawn from @racket[g] until @racket[stop] is encountered. This utility uses memory proportional to the size of the repeated sequence.
+Analogous to @racket[cycle], returns an infinite generator whose values are the elements of @racket[g], repeated when exhausted. If a @racket[stop] value is provided, the elements are drawn from @racket[g] until @racket[stop] is encountered. This utility uses memory proportional to the size of the repeated sequence.
 
 @examples[
     #:eval eval-for-docs
@@ -190,7 +190,7 @@ Analogous to @racket[cycle], yields an infinite generator whose values are the e
 @defproc[(generator-repeat [v any/c])
          generator?]{
 
-Analogous to @racket[repeat], yields an infinite generator whose values are @racket[v] repeated indefinitely.
+Analogous to @racket[repeat], returns an infinite generator whose values are @racket[v] repeated indefinitely.
 
 @examples[
     #:eval eval-for-docs
@@ -211,7 +211,7 @@ Analogous to @racket[repeat], yields an infinite generator whose values are @rac
          generator?]
 	 )]{
 
-Analogous to @racket[zip-with], @racket[generator-zip-with] yields a fresh generator whose values are the elements of the input generators combined using the function @racket[f]. @racket[f] must accept a number of arguments equal to the number of provided generators. @racket[generator-zip] simply combines the generator values using @racket[list]. The generation stops when one of the input generators runs out of values.
+Analogous to @racket[zip-with], @racket[generator-zip-with] returns a fresh generator whose values are the elements of the input generators combined using the function @racket[f]. @racket[f] must accept a number of arguments equal to the number of provided generators. @racket[generator-zip] simply combines the generator values using @racket[list]. The generation stops when one of the input generators runs out of values.
 
 @examples[
     #:eval eval-for-docs
@@ -234,7 +234,7 @@ Analogous to @racket[zip-with], @racket[generator-zip-with] yields a fresh gener
 							   ...)
          generator?]{
 
-Yields a fresh generator whose values are the elements of the input generators taken in turn, one at a time. The generation stops when one of the input generators runs out of values.
+Returns a fresh generator whose values are the elements of the input generators taken in turn, one at a time. The generation stops when one of the input generators runs out of values.
 
 @examples[
     #:eval eval-for-docs
@@ -251,7 +251,7 @@ Yields a fresh generator whose values are the elements of the input generators t
 @defproc[(generator-join [g generator?])
          generator?]{
 
-Yields a fresh generator whose values are the elements of @racket[g] "flattened" by one level.
+Returns a fresh generator whose values are the elements of @racket[g] "flattened" by one level.
 
 @examples[
     #:eval eval-for-docs
@@ -266,7 +266,7 @@ Yields a fresh generator whose values are the elements of @racket[g] "flattened"
 @defproc[(generator-flatten [g generator?])
          generator?]{
 
-Yields a fresh generator whose values are the "flattened" elements of @racket[g]. This is equivalent to repeatedly applying @racket[generator-join] until the values are no longer sequences.
+Returns a fresh generator whose values are the "flattened" elements of @racket[g]. This is equivalent to repeatedly applying @racket[generator-join] until the values are no longer sequences.
 
 @examples[
     #:eval eval-for-docs
@@ -343,7 +343,7 @@ Yield all values from a provided generator. This should only be used inside a ge
                       [v any/c] ...)
          sequence?]{
 
- Similar to @racketlink[b:in-producer]{in-producer}, but yields a data/collection @racket[sequence?] rather than a built-in @racketlink[b:sequence?]{sequence?}.
+ Similar to @racketlink[b:in-producer]{in-producer}, but returns a data/collection @racket[sequence?] rather than a built-in @racketlink[b:sequence?]{sequence?}.
 
 @examples[
     #:eval eval-for-docs
