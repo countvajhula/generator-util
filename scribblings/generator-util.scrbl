@@ -31,7 +31,7 @@
 
 Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{generators}.
 
-This module provides general-purpose utilities to achieve standard sequence-style transformations with generators without losing the laziness and constant-memory guarantees that generators provide.
+This module provides general-purpose utilities to achieve standard "list-like" transformations with generators without losing the laziness and constant-memory guarantees that generators provide.
 
 @elemtag["coroutines"]{@bold{Caveat}}: These utilities are not suitable for use with coroutines, i.e. in cases where there is bidirectional communication with a generator. This is because the utilities wrap underlying generators with intermediary ones in some cases, and values sent to them are not conveyed to the underlying generators.
 
@@ -311,7 +311,7 @@ Yield all values from a provided generator. This should only be used inside a ge
          (-generator-state (api-reader-source source)))])
     (define g (api-reader (make-generator 1 2 3)))
     (g)
-    (->list g)
+    (->list (in-producer g (void)))
   ]
 
  To implement this interface for custom types, the following method needs to be implemented:
