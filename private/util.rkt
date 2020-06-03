@@ -1,9 +1,6 @@
 #lang racket/base
 
-(require racket/undefined
-         racket/function
-         racket/stream
-         racket/match
+(require racket/stream
          (except-in data/collection
                     foldl
                     foldl/steps
@@ -11,20 +8,7 @@
                     index-of)
          relation)
 
-(provide unthunk
-         !!
-         flip
-         take-while)
-
-(define (unthunk f . args)
-  (λ ignored-args
-    (apply f args)))
-
-(define !! negate)
-
-(define (flip f)
-  (λ (x y . args)
-    (apply f y x args)))
+(provide take-while)
 
 (define (take-while pred seq)
   (if (empty? seq)

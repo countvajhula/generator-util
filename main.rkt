@@ -10,9 +10,7 @@
                   yield
                   sequence->repeated-generator)
          (only-in racket/function
-                  const
-                  curry
-                  curryr)
+                  const)
          racket/generic
          racket/undefined
          (except-in data/collection
