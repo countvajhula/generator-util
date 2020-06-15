@@ -375,6 +375,7 @@
        (gen)
        (check-true (generator-done? gen))
        (let-values ([(is-empty? gen) (generator-empty? gen)])
-         (check-true (generator-done? gen))))))
+         (check-true (generator-done? gen)))))))
 
+(module+ test
   (run-tests tests))
