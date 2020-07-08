@@ -300,10 +300,11 @@ Returns a generator that generates @racket[seq]. This is an alias for @racket[->
 
 @examples[
     #:eval eval-for-docs
-    (define g (->generator "apple"))
+    (define g (generate (range 5 10)))
 	(g)
 	(g)
-    (define g (->generator (range 5 10)))
+	(g)
+    (define g (generate "apple"))
 	(g)
 	(g)
 	(g)
