@@ -7,22 +7,23 @@
                     (rename-in racket/generator (generator? b:generator?) (generator-state b:generator-state))
                     generator-util
                     (only-in data/collection sequence? cycle repeat)
-                    (only-in relation ->list fold)]]
+                    (only-in relation ->list ->generator fold)]]
 
 @(define eval-for-docs
   (parameterize ([sandbox-output 'string]
                  [sandbox-error-output 'string]
                  [sandbox-memory-limit #f])
                  (make-evaluator 'racket/base
-                                 '(require relation)
-                                 '(require generator-util)
-                                 '(require racket/set)
-                                 '(require racket/generic)
-                                 '(require (prefix-in b: racket/generator))
-                                 '(require (only-in racket/generator
+                                 '(require relation
+                                           generator-util
+                                           racket/set
+                                           racket/generic
+                                           (prefix-in b: racket/generator)
+                                           (only-in racket/generator
                                                     generator
-                                                    yield))
-                                 '(require racket/stream))))
+                                                    yield)
+                                           (only-in racket range)
+                                           racket/stream))))
 
 @title{Generator Utilities}
 @author{Siddhartha Kasivajhula}
@@ -289,6 +290,23 @@ Yield all values from a provided generator. This should only be used inside a ge
     (g)
     (g)
     (g)
+  ]
+}
+
+@defproc[(generate [seq sequence?] [return any/c (void)])
+         generator?]{
+
+Returns a generator that generates @racket[seq]. This is an alias for @racket[->generator].
+
+@examples[
+    #:eval eval-for-docs
+    (define g (->generator "apple"))
+	(g)
+	(g)
+    (define g (->generator (range 5 10)))
+	(g)
+	(g)
+	(g)
   ]
 }
 

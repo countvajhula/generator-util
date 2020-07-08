@@ -24,6 +24,7 @@
 
 (provide gen:generator
          generator/c
+         generate
          (contract-out
           [generator? (-> any/c boolean?)]
           [generator-state (-> generator? symbol?)]
@@ -82,6 +83,8 @@
                       foldl/steps
                       append)
            relation))
+
+(define generate ->generator)
 
 (define-generics generator
   (generator-state generator)
