@@ -1,6 +1,9 @@
 .. image:: https://travis-ci.com/countvajhula/generator-util.svg?branch=master
     :target: https://travis-ci.com/countvajhula/generator-util
 
+.. image:: https://coveralls.io/repos/github/countvajhula/generator-util/badge.svg?branch=master
+    :target: https://coveralls.io/github/countvajhula/generator-util?branch=master
+
 generator-util
 ==============
 Useful utilities for working with generators in Racket.
