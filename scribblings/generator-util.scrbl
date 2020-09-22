@@ -4,10 +4,10 @@
          scribble/example
          racket/sandbox
          @for-label[(rename-in racket (sequence? b:sequence?) (in-producer b:in-producer))
-                    (rename-in racket/generator (generator? b:generator?) (generator-state b:generator-state))
+                    (only-in racket/generator (generator b:generator) (generator? b:generator?) (generator-state b:generator-state))
                     generator-util
-                    (only-in data/collection sequence? cycle repeat)
-                    (only-in relation ->list ->generator fold)]]
+                    (only-in data/collection sequence? cycle repeat gen:collection)
+                    (only-in relation ->list ->generator fold :)]]
 
 @(define eval-for-docs
   (parameterize ([sandbox-output 'string]
@@ -19,9 +19,6 @@
                                            racket/set
                                            racket/generic
                                            (prefix-in b: racket/generator)
-                                           (only-in racket/generator
-                                                    generator
-                                                    yield)
                                            (only-in racket range)
                                            racket/stream))))
 
@@ -32,7 +29,7 @@
 
 Primitives and utilities for working with @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{generators}.
 
-This module provides general-purpose utilities to achieve standard "list-like" transformations with generators without losing the laziness and constant-memory guarantees that generators provide.
+This module provides general-purpose utilities to achieve standard "list-like" transformations with generators without losing the laziness and constant-memory guarantees that generators provide. Alternative bindings for many of those found in @seclink["Generators" #:doc '(lib "scribblings/reference/reference.scrbl")]{@racket[racket/generator]} are included here, so that importing both is generally not necessary.
 
 @elemtag["coroutines"]{@bold{Caveat}}: These utilities are not suitable for use with coroutines, i.e. in cases where there is bidirectional communication with a generator. This is because the utilities wrap underlying generators with intermediary ones in some cases, and values sent to them are not conveyed to the underlying generators.
 
@@ -47,7 +44,11 @@ This module provides general-purpose utilities to achieve standard "list-like" t
          generator?]
 	 )]{
 
-  Constructors for @racketlink[generator]{generators}, analogous to @racket[null], @racket[cons], and @racket[list] for lists. @racket[generator-null] serves as the null constructor as well as the identity value in composing generators, while @racket[generator-cons] constructs a new generator from an arbitrary value and an existing generator. @racket[make-generator] is a variadic constructor analogous to @racket[list]. If a @racket[return] value is provided to @racket[generator-null], it is used as the return value of the generator once it is exhausted -- that is, as the return value for any generator with this empty generator instance at its tail. Note that these constructors are @emph{not} lazy. In order to construct a generator from a sequence lazily, use @racket[generate] instead.
+  Constructors for @racketlink[b:generator]{generators}, analogous to @racket[null], @racket[cons], and @racket[list] for lists. @racket[generator-null] serves as the null constructor as well as the identity value in composing generators, while @racket[generator-cons] constructs a new generator from an arbitrary value and an existing generator. @racket[make-generator] is a variadic constructor analogous to @racket[list]. If a @racket[return] value is provided to @racket[generator-null], it is used as the return value of the generator once it is exhausted -- that is, as the return value for any generator with this empty generator instance at its tail.
+
+  Note that these constructors are @emph{not} lazy. In order to construct a generator from a sequence lazily, use @racket[generate] instead.
+
+  Also see @racket[gen] for convenient ways to use these constructors.
 
 @examples[
     #:eval eval-for-docs
@@ -296,7 +297,7 @@ Yield all values from a provided generator. This should only be used inside a ge
 @defproc[(generate [seq sequence?] [return any/c (void)])
          generator?]{
 
-Returns a generator that generates @racket[seq]. This is an alias for @racket[->generator].
+Returns a generator that generates @racket[seq]. See @racket[->generator].
 
 @examples[
     #:eval eval-for-docs
@@ -312,6 +313,8 @@ Returns a generator that generates @racket[seq]. This is an alias for @racket[->
 }
 
 @section{Interface}
+
+This module provides a generic interface @racket[gen:generator] representing a generator, as well as a particular generator type @racket[gen] implementing that interface. The former allows supporting generator semantics in custom types and the latter is a rich generator type intended as a drop-in replacement for built-in generators, and which comes with some conveniences.
 
 @defthing[gen:generator any/c]{
 
@@ -356,6 +359,29 @@ Returns a generator that generates @racket[seq]. This is an alias for @racket[->
 }
 
 }
+
+@defstruct[gen ([primitive generator?])
+               #:omit-constructor]{
+  A type representing a generator. All generators returned by this module are of this type, and they should function identically to built-in generators, except that this type also implements @racket[gen:collection], enabling it to be treated as a generic collection of values, and supporting convenient construction using the generic construction operator @racket[:].
+@itemlist[
+@item{@racket[primitive] - An underlying generator object, which would typically be a built-in @racketlink[b:generator]{@racket[generator]}, but could also be a @racket[gen].}]
+
+@examples[
+    #:eval eval-for-docs
+	(define g1 (: 1 2 (generator-null)))
+	(define g2 (: 3 4 5 g1))
+	(g2)
+	(g2)
+	(g2)
+	(g2)
+	(g2)
+  ]
+}
+
+@defform[(generator formals body ...)]{
+  Identical to @racketlink[b:generator]{@racket[generator]} except that it produces a @racket[gen] rather than a built-in generator type.
+}
+
 
 @defproc[(in-producer [g generator?]
                       [stop any/c undefined]

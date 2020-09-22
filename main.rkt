@@ -6,7 +6,6 @@
          racket/match
          (prefix-in b: racket/generator)
          (only-in racket/generator
-                  generator
                   yield
                   sequence->repeated-generator)
          (only-in racket/function
@@ -25,7 +24,10 @@
 (provide gen:generator
          generator/c
          generate
+         generator
+         yield  ; reprovided from racket/generator
          (contract-out
+          [struct gen ((primitive generator?))]
           [generator? (-> any/c boolean?)]
           [generator-state (-> generator? symbol?)]
           [in-producer (->* (generator?)
@@ -84,6 +86,9 @@
                       append)
            relation))
 
+(define-syntax-rule (generator formals body ...)
+  (gen (b:generator formals body ...)))
+
 (define-generics generator
   (generator-state generator)
   #:fast-defaults ([b:generator?
@@ -109,24 +114,22 @@
       (apply g args))))
 
 (define (generator-null [return (void)])
-  (gen
-   (generator ()
-     return)))
+  (generator ()
+    return))
 
 (define (generator-cons v g)
-  (gen
-   (generator ()
-     (yield v)
-     (let ([cur (g)])
-       (if (generator-done? g)
-           cur
-           (let loop ([cur cur]
-                      [next (g)])
-             (if (generator-done? g)
-                 (begin (yield cur)
-                        (g))
-                 (begin (yield cur)
-                        (loop next (g))))))))))
+  (generator ()
+    (yield v)
+    (let ([cur (g)])
+      (if (generator-done? g)
+          cur
+          (let loop ([cur cur]
+                     [next (g)])
+            (if (generator-done? g)
+                (begin (yield cur)
+                       (g))
+                (begin (yield cur)
+                       (loop next (g)))))))))
 
 (define (make-generator #:return [return (void)] . vals)
   (match vals
@@ -134,13 +137,12 @@
     [(cons v vs) (generator-cons v (apply make-generator #:return return vs))]))
 
 (define (generate seq [return (void)])
-  (gen
-   (generator ()
-     (for-each (λ (v)
-                 (yield v)
-                 (void))
-               seq)
-     return)))
+  (generator ()
+    (for-each (λ (v)
+                (yield v)
+                (void))
+              seq)
+    return))
 
 (define (in-producer g [stop undefined] . args)
   (let ([pred (if (undefined? stop)
@@ -177,58 +179,55 @@
                     (generator-cons val g))))))
 
 (define (generator-map f g)
-  (gen
-   (generator ()
-     (let loop ([cur (g)]
-                [next (g)])
-       (if (generator-done? g)
-           (begin (yield (f cur))
-                  (let ([result (g)])
-                    (unless (void? result)
-                      (f result))))
-           (begin (yield (f cur))
-                  (loop next (g))))))))
+  (generator ()
+    (let loop ([cur (g)]
+               [next (g)])
+      (if (generator-done? g)
+          (begin (yield (f cur))
+                 (let ([result (g)])
+                   (unless (void? result)
+                     (f result))))
+          (begin (yield (f cur))
+                 (loop next (g)))))))
 
 (define (generator-filter pred g)
-  (gen
-   (generator ()
-     (let loop ([cur (g)]
-                [next (g)])
-       (if (generator-done? g)
-           (begin (when (pred cur)
-                    (yield cur))
-                  (let ([result (g)])
-                    (unless (void? result)
-                      (when (pred result)
-                        result))))
-           (begin (when (pred cur)
-                    (yield cur))
-                  (loop next (g))))))))
+  (generator ()
+    (let loop ([cur (g)]
+               [next (g)])
+      (if (generator-done? g)
+          (begin (when (pred cur)
+                   (yield cur))
+                 (let ([result (g)])
+                   (unless (void? result)
+                     (when (pred result)
+                       result))))
+          (begin (when (pred cur)
+                   (yield cur))
+                 (loop next (g)))))))
 
 (define (generator-fold f g [base undefined] #:order [order 'abb])
-  (gen
-   (generator ()
-     (let-values ([(is-empty? g) (generator-empty? g)])
-       (if is-empty?
-           base
-           (let-values ([(head g) (generator-peek g)])
-             (let ([base (if (undefined? base)
-                             ((id f) head)
-                             base)]
-                   [f (if (= order 'abb)
-                          f
-                          (flip f))])
-               (let loop ([acc base]
-                          [cur (g)]
-                          [next (g)])
-                 (let ([acc (f cur acc)])
-                   (if (generator-done? g)
-                       (begin (yield acc)
-                              (let ([result (g)])
-                                (unless (void? result)
-                                  (yield (f result acc)))))
-                       (begin (yield acc)
-                              (loop acc next (g)))))))))))))
+  (generator ()
+    (let-values ([(is-empty? g) (generator-empty? g)])
+      (if is-empty?
+          base
+          (let-values ([(head g) (generator-peek g)])
+            (let ([base (if (undefined? base)
+                            ((id f) head)
+                            base)]
+                  [f (if (= order 'abb)
+                         f
+                         (flip f))])
+              (let loop ([acc base]
+                         [cur (g)]
+                         [next (g)])
+                (let ([acc (f cur acc)])
+                  (if (generator-done? g)
+                      (begin (yield acc)
+                             (let ([result (g)])
+                               (unless (void? result)
+                                 (yield (f result acc)))))
+                      (begin (yield acc)
+                             (loop acc next (g))))))))))))
 
 (define (yield-from g)
   (if (generator-done? g)
@@ -242,10 +241,9 @@
                    (yield-from g))))))
 
 (define (generator-append a b)
-  (gen
-   (generator ()
-     (yield-from a)
-     (yield-from b))))
+  (generator ()
+    (yield-from a)
+    (yield-from b)))
 
 (define (generator-cycle g [stop (void)])
   (sequence->repeated-generator (in-producer g stop)))
@@ -254,29 +252,27 @@
   (sequence->repeated-generator (list v)))
 
 (define (generator-zip-with f . gs)
-  (gen
-   (generator ()
-     (let loop ([curs (b:map (curryr apply null) gs)])
-       (unless (any? (b:map generator-done? gs))
-         (yield (apply f curs))
-         (loop (b:map (curryr apply null) gs)))))))
+  (generator ()
+    (let loop ([curs (b:map (curryr apply null) gs)])
+      (unless (any? (b:map generator-done? gs))
+        (yield (apply f curs))
+        (loop (b:map (curryr apply null) gs))))))
 
 (define (generator-zip . gs)
   (apply generator-zip-with list gs))
 
 (define (generator-interleave . gs)
-  (gen
-   (generator ()
-     (unless (empty? gs)
-       (let loop ([remaining-gs gs])
-         (if (empty? remaining-gs)
-             (loop gs)
-             (let ([first-g (first remaining-gs)])
-               (let ([cur (first-g)])
-                 (if (generator-done? first-g)
-                     cur
-                     (begin (yield cur)
-                            (loop (rest remaining-gs))))))))))))
+  (generator ()
+    (unless (empty? gs)
+      (let loop ([remaining-gs gs])
+        (if (empty? remaining-gs)
+            (loop gs)
+            (let ([first-g (first remaining-gs)])
+              (let ([cur (first-g)])
+                (if (generator-done? first-g)
+                    cur
+                    (begin (yield cur)
+                           (loop (rest remaining-gs)))))))))))
 
 (define (flatten-one-level vs)
   (if (sequence? vs)
@@ -289,20 +285,19 @@
                             vs)))
 
 (define (generator-join g)
-  (gen
-   (generator ()
-     (let ([cur (g)])
-       (if (generator-done? g)
-           cur
-           (let loop ([cur cur]
-                      [next (g)])
-             (if (generator-done? g)
-                 (begin (flatten-one-level cur)
-                        (let ([result (g)])
-                          (unless (void? result)
-                            (flatten-one-level result))))
-                 (begin (flatten-one-level cur)
-                        (loop next (g))))))))))
+  (generator ()
+    (let ([cur (g)])
+      (if (generator-done? g)
+          cur
+          (let loop ([cur cur]
+                     [next (g)])
+            (if (generator-done? g)
+                (begin (flatten-one-level cur)
+                       (let ([result (g)])
+                         (unless (void? result)
+                           (flatten-one-level result))))
+                (begin (flatten-one-level cur)
+                       (loop next (g)))))))))
 
 (define (generator-flatten g)
   (let-values ([(is-empty? g) (generator-empty? g)])
