@@ -84,120 +84,151 @@
                       append)
            relation))
 
-(define generate ->generator)
-
 (define-generics generator
   (generator-state generator)
   #:fast-defaults ([b:generator?
                     (define generator-state b:generator-state)]))
 
-(define (in-producer gen [stop undefined] . args)
-  (let ([pred (if (undefined? stop)
-                  (const #t)
-                  (!! (curry = stop)))])
-    (take-while pred
-                (build-sequence (apply unthunk gen args)))))
+(struct gen (primitive)
+  #:transparent
+
+  #:methods gen:collection
+  [(define (conj this v)
+     (let ([g (gen-primitive this)])
+       (generator-cons v g)))]
+
+  #:methods gen:generator
+  [(define/generic -generator-state generator-state)
+   (define (generator-state this)
+     (let ([g (gen-primitive this)])
+       (-generator-state g)))]
+
+  #:property prop:procedure
+  (λ (this . args)
+    (let ([g (gen-primitive this)])
+      (apply g args))))
 
 (define (generator-null [return (void)])
-  (generator ()
-    return))
+  (gen
+   (generator ()
+     return)))
 
-(define (generator-cons v gen)
-  (generator ()
-    (yield v)
-    (let ([cur (gen)])
-      (if (generator-done? gen)
-          cur
-          (let loop ([cur cur]
-                     [next (gen)])
-            (if (generator-done? gen)
-                (begin (yield cur)
-                       (gen))
-                (begin (yield cur)
-                       (loop next (gen)))))))))
+(define (generator-cons v g)
+  (gen
+   (generator ()
+     (yield v)
+     (let ([cur (g)])
+       (if (generator-done? g)
+           cur
+           (let loop ([cur cur]
+                      [next (g)])
+             (if (generator-done? g)
+                 (begin (yield cur)
+                        (g))
+                 (begin (yield cur)
+                        (loop next (g))))))))))
 
 (define (make-generator #:return [return (void)] . vals)
   (match vals
     ['() (generator-null return)]
     [(cons v vs) (generator-cons v (apply make-generator #:return return vs))]))
 
-(define (generator-empty? gen)
-  (if (generator-done? gen)
-      (values #t gen)
-      (let ([val (gen)])
-        (if (generator-done? gen)
-            (values #t
-                    (generator () val))
-            (values #f
-                    (generator-cons val gen))))))
+(define (generate seq [return (void)])
+  (gen
+   (generator ()
+     (for-each (λ (v)
+                 (yield v)
+                 (void))
+               seq)
+     return)))
 
-(define (generator-done? gen)
-  (= (generator-state gen)
+(define (in-producer g [stop undefined] . args)
+  (let ([pred (if (undefined? stop)
+                  (const #t)
+                  (!! (curry = stop)))])
+    (take-while pred
+                (build-sequence (apply unthunk g args)))))
+
+(define (generator-empty? g)
+  (if (generator-done? g)
+      (values #t g)
+      (let ([val (g)])
+        (if (generator-done? g)
+            (values #t
+                    (generator-null val))
+            (values #f
+                    (generator-cons val g))))))
+
+(define (generator-done? g)
+  (= (generator-state g)
      'done))
 
-(define (generator-peek gen)
-  (if (generator-done? gen)
+(define (generator-peek g)
+  (if (generator-done? g)
       (raise-argument-error 'generator-peek
                             "Non-empty generator in a non-terminal state."
-                            gen)
-      (let ([val (gen)])
-        (if (generator-done? gen)
+                            g)
+      (let ([val (g)])
+        (if (generator-done? g)
             (raise-argument-error 'generator-peek
                             "Non-empty generator in a non-terminal state."
-                            gen)
+                            g)
             (values val
-                    (generator-cons val gen))))))
+                    (generator-cons val g))))))
 
-(define (generator-map f gen)
-  (generator ()
-    (let loop ([cur (gen)]
-               [next (gen)])
-      (if (generator-done? gen)
-          (begin (yield (f cur))
-                 (let ([result (gen)])
-                   (unless (void? result)
-                     (f result))))
-          (begin (yield (f cur))
-                 (loop next (gen)))))))
+(define (generator-map f g)
+  (gen
+   (generator ()
+     (let loop ([cur (g)]
+                [next (g)])
+       (if (generator-done? g)
+           (begin (yield (f cur))
+                  (let ([result (g)])
+                    (unless (void? result)
+                      (f result))))
+           (begin (yield (f cur))
+                  (loop next (g))))))))
 
-(define (generator-filter pred gen)
-  (generator ()
-    (let loop ([cur (gen)]
-               [next (gen)])
-      (if (generator-done? gen)
-          (begin (when (pred cur)
-                   (yield cur))
-                 (let ([result (gen)])
-                   (unless (void? result)
-                     (when (pred result)
-                       result))))
-          (begin (when (pred cur)
-                   (yield cur))
-                 (loop next (gen)))))))
+(define (generator-filter pred g)
+  (gen
+   (generator ()
+     (let loop ([cur (g)]
+                [next (g)])
+       (if (generator-done? g)
+           (begin (when (pred cur)
+                    (yield cur))
+                  (let ([result (g)])
+                    (unless (void? result)
+                      (when (pred result)
+                        result))))
+           (begin (when (pred cur)
+                    (yield cur))
+                  (loop next (g))))))))
 
-(define (generator-fold f gen [base undefined] #:order [order 'abb])
-  (generator ()
-    (let-values ([(is-empty? gen) (generator-empty? gen)])
-      (if is-empty?
-          base
-          (let-values ([(head gen) (generator-peek gen)])
-            (let ([base (if (undefined? base)
-                            ((id f) head)
-                            base)]
-                  [f (if (= order 'abb)
-                         f
-                         (flip f))])
-              (let loop ([acc base]
-                         [cur (gen)]
-                         [next (gen)])
-                (let ([acc (f cur acc)])
-                  (if (generator-done? gen)
-                      (begin (yield acc)
-                             (let ([result (gen)])
-                               (unless (void? result)
-                                 (yield (f result acc)))))
-                      (begin (yield acc)
-                             (loop acc next (gen))))))))))))
+(define (generator-fold f g [base undefined] #:order [order 'abb])
+  (gen
+   (generator ()
+     (let-values ([(is-empty? g) (generator-empty? g)])
+       (if is-empty?
+           base
+           (let-values ([(head g) (generator-peek g)])
+             (let ([base (if (undefined? base)
+                             ((id f) head)
+                             base)]
+                   [f (if (= order 'abb)
+                          f
+                          (flip f))])
+               (let loop ([acc base]
+                          [cur (g)]
+                          [next (g)])
+                 (let ([acc (f cur acc)])
+                   (if (generator-done? g)
+                       (begin (yield acc)
+                              (let ([result (g)])
+                                (unless (void? result)
+                                  (yield (f result acc)))))
+                       (begin (yield acc)
+                              (loop acc next (g)))))))))))))
 
 (define (yield-from g)
   (if (generator-done? g)
@@ -211,9 +242,10 @@
                    (yield-from g))))))
 
 (define (generator-append a b)
-  (generator ()
-    (yield-from a)
-    (yield-from b)))
+  (gen
+   (generator ()
+     (yield-from a)
+     (yield-from b))))
 
 (define (generator-cycle g [stop (void)])
   (sequence->repeated-generator (in-producer g stop)))
@@ -222,27 +254,29 @@
   (sequence->repeated-generator (list v)))
 
 (define (generator-zip-with f . gs)
-  (generator ()
-    (let loop ([curs (b:map (curryr apply null) gs)])
-      (unless (any? (b:map generator-done? gs))
-        (yield (apply f curs))
-        (loop (b:map (curryr apply null) gs))))))
+  (gen
+   (generator ()
+     (let loop ([curs (b:map (curryr apply null) gs)])
+       (unless (any? (b:map generator-done? gs))
+         (yield (apply f curs))
+         (loop (b:map (curryr apply null) gs)))))))
 
 (define (generator-zip . gs)
   (apply generator-zip-with list gs))
 
 (define (generator-interleave . gs)
-  (generator ()
-    (unless (empty? gs)
-      (let loop ([remaining-gs gs])
-        (if (empty? remaining-gs)
-            (loop gs)
-            (let ([first-g (first remaining-gs)])
-              (let ([cur (first-g)])
-                (if (generator-done? first-g)
-                   cur
-                   (begin (yield cur)
-                          (loop (rest remaining-gs)))))))))))
+  (gen
+   (generator ()
+     (unless (empty? gs)
+       (let loop ([remaining-gs gs])
+         (if (empty? remaining-gs)
+             (loop gs)
+             (let ([first-g (first remaining-gs)])
+               (let ([cur (first-g)])
+                 (if (generator-done? first-g)
+                     cur
+                     (begin (yield cur)
+                            (loop (rest remaining-gs))))))))))))
 
 (define (flatten-one-level vs)
   (if (sequence? vs)
@@ -254,36 +288,38 @@
                             "sequence?"
                             vs)))
 
-(define (generator-join gen)
-  (generator ()
-    (let ([cur (gen)])
-      (if (generator-done? gen)
-          cur
-          (let loop ([cur cur]
-                     [next (gen)])
-            (if (generator-done? gen)
-                (begin (flatten-one-level cur)
-                       (let ([result (gen)])
-                         (unless (void? result)
-                           (flatten-one-level result))))
-                (begin (flatten-one-level cur)
-                       (loop next (gen)))))))))
+(define (generator-join g)
+  (gen
+   (generator ()
+     (let ([cur (g)])
+       (if (generator-done? g)
+           cur
+           (let loop ([cur cur]
+                      [next (g)])
+             (if (generator-done? g)
+                 (begin (flatten-one-level cur)
+                        (let ([result (g)])
+                          (unless (void? result)
+                            (flatten-one-level result))))
+                 (begin (flatten-one-level cur)
+                        (loop next (g))))))))))
 
-(define (generator-flatten gen)
-  (let-values ([(is-empty? gen) (generator-empty? gen)])
+(define (generator-flatten g)
+  (let-values ([(is-empty? g) (generator-empty? g)])
     (if is-empty?
-        gen
-        (let-values ([(v gen) (generator-peek gen)])
+        g
+        (let-values ([(v g) (generator-peek g)])
           (if (sequence? v)
-              (generator-flatten (generator-join gen))
-              gen)))))
+              (generator-flatten (generator-join g))
+              g)))))
 
 (module+ test
 
+  (define generator->list (.. ->list (curryr in-producer (void))))
   (define tests
     (test-suite
      "Tests for generator utilities"
-     (check-equal? (->list (generator-cons 4 (->generator (list 1 2 3)))) '(4 1 2 3))
+     (check-equal? (generator->list (generator-cons 4 (->generator (list 1 2 3)))) '(4 1 2 3))
      (let ([g (generator-cons 4 (->generator (list 1)))])
        (g)
        (g)
@@ -299,76 +335,76 @@
        (g)
        (check-equal? (generator-state g) 'done)
        (check-equal? (g) 5))
-     (check-equal? (->list (make-generator 1 2 3)) '(1 2 3))
-     (check-equal? (->list (make-generator)) '())
+     (check-equal? (generator->list (make-generator 1 2 3)) '(1 2 3))
+     (check-equal? (generator->list (make-generator)) '())
      (let ([g (make-generator)])
        (check-equal? (generator-state g) 'fresh)
        (check-true (void? (g)))
        (check-equal? (generator-state g) 'done))
-     (check-equal? (->list (generator () (yield-from (->generator (list 1 2 3))))) '(1 2 3))
-     (check-equal? (->list (generator () (yield-from (make-generator)))) '())
-     (check-equal? (->list (generator () (yield-from (make-generator 1)))) '(1))
-     (check-equal? (->list (generator-append (->generator (list 1 2 3)) (->generator (list 4 5 6)))) '(1 2 3 4 5 6))
-     (check-equal? (->list (generator-append (->generator (list 1)) (->generator (list 4)))) '(1 4))
+     (check-equal? (generator->list (generator () (yield-from (->generator (list 1 2 3))))) '(1 2 3))
+     (check-equal? (generator->list (generator () (yield-from (make-generator)))) '())
+     (check-equal? (generator->list (generator () (yield-from (make-generator 1)))) '(1))
+     (check-equal? (generator->list (generator-append (->generator (list 1 2 3)) (->generator (list 4 5 6)))) '(1 2 3 4 5 6))
+     (check-equal? (generator->list (generator-append (->generator (list 1)) (->generator (list 4)))) '(1 4))
      (check-equal? (->list (take 5 (in-producer (generator-cycle (make-generator 1 2 3))))) '(1 2 3 1 2))
      (check-equal? (->list (take 5 (in-producer (generator-cycle (make-generator 1))))) '(1 1 1 1 1))
      (check-equal? (->list (take 3 (in-producer (generator-repeat 5)))) '(5 5 5))
      (check-equal? (->list (take 3 (in-producer (generator-repeat (void))))) (list (void) (void) (void)))
-     (check-equal? (->list (generator-zip (->generator (list 1)) (->generator (list 4)))) '((1 4)))
-     (check-equal? (->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b 'c)))) '((1 a) (2 b) (3 c)))
-     (check-equal? (->list (generator-zip (->generator (list)) (->generator (list)))) '())
-     (check-equal? (->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a)))) '((1 a)))
-     (check-equal? (->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b)) (->generator (list 'A 'B 'C)))) '((1 a A) (2 b B)))
-     (check-equal? (->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2 3)))) '(2 4 6))
-     (check-equal? (->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2)))) '(2 4))
-     (check-equal? (->list (generator-zip-with + (->generator (list)) (->generator (list)))) '())
-     (check-equal? (->list (generator-interleave (make-generator 1 2 3) (make-generator 4 5 6))) '(1 4 2 5 3 6))
-     (check-equal? (->list (generator-interleave (make-generator 1) (make-generator 2))) '(1 2))
-     (check-equal? (->list (generator-interleave (make-generator 1 2) (make-generator 3))) '(1 3 2))
-     (check-equal? (->list (generator-interleave (make-generator 1) (make-generator 2 3))) '(1 2))
-     (check-equal? (->list (generator-interleave (make-generator 1) (make-generator))) '(1))
-     (check-equal? (->list (generator-interleave (make-generator) (make-generator 1))) '())
-     (check-equal? (->list (generator-interleave (make-generator) (make-generator))) '())
+     (check-equal? (generator->list (generator-zip (->generator (list 1)) (->generator (list 4)))) '((1 4)))
+     (check-equal? (generator->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b 'c)))) '((1 a) (2 b) (3 c)))
+     (check-equal? (generator->list (generator-zip (->generator (list)) (->generator (list)))) '())
+     (check-equal? (generator->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a)))) '((1 a)))
+     (check-equal? (generator->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b)) (->generator (list 'A 'B 'C)))) '((1 a A) (2 b B)))
+     (check-equal? (generator->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2 3)))) '(2 4 6))
+     (check-equal? (generator->list (generator-zip-with + (->generator (list 1 2 3)) (->generator (list 1 2)))) '(2 4))
+     (check-equal? (generator->list (generator-zip-with + (->generator (list)) (->generator (list)))) '())
+     (check-equal? (generator->list (generator-interleave (make-generator 1 2 3) (make-generator 4 5 6))) '(1 4 2 5 3 6))
+     (check-equal? (generator->list (generator-interleave (make-generator 1) (make-generator 2))) '(1 2))
+     (check-equal? (generator->list (generator-interleave (make-generator 1 2) (make-generator 3))) '(1 3 2))
+     (check-equal? (generator->list (generator-interleave (make-generator 1) (make-generator 2 3))) '(1 2))
+     (check-equal? (generator->list (generator-interleave (make-generator 1) (make-generator))) '(1))
+     (check-equal? (generator->list (generator-interleave (make-generator) (make-generator 1))) '())
+     (check-equal? (generator->list (generator-interleave (make-generator) (make-generator))) '())
      (check-equal? (->list (in-producer (->generator (list 1 2 3 4 (void) 5 6))
                                         (void)))
                    '(1 2 3 4))
      (check-equal? (->list (take 7 (in-producer (->generator (list 1 2 3 4 (void) 5 6)))))
                    (list 1 2 3 4 (void) 5 6))
-     (check-equal? (->list (generator-map add1 (->generator (list 1 2 3))))
+     (check-equal? (generator->list (generator-map add1 (->generator (list 1 2 3))))
                    '(2 3 4))
-     (check-equal? (->list (generator-filter odd? (->generator (list 1 2 3 4 5 6))))
+     (check-equal? (generator->list (generator-filter odd? (->generator (list 1 2 3 4 5 6))))
                    '(1 3 5))
-     (check-equal? (->list (generator-filter even? (->generator (list 1 2 3 4 5 6))))
+     (check-equal? (generator->list (generator-filter even? (->generator (list 1 2 3 4 5 6))))
                    '(2 4 6))
-     (check-equal? (->list (generator-join (->generator (list (list 1 2) (list 3 4) (list 5) (list 6)))))
+     (check-equal? (generator->list (generator-join (->generator (list (list 1 2) (list 3 4) (list 5) (list 6)))))
                    '(1 2 3 4 5 6))
-     (check-equal? (->list (generator-join (->generator (list (list 1 2 3 4 5 6)))))
+     (check-equal? (generator->list (generator-join (->generator (list (list 1 2 3 4 5 6)))))
                    '(1 2 3 4 5 6))
-     (check-equal? (->list (generator-join (make-generator)))
+     (check-equal? (generator->list (generator-join (make-generator)))
                    '())
-     (check-equal? (->list (generator-flatten (->generator (list (list 1 2) (list 3 4) (list 5) (list 6)))))
+     (check-equal? (generator->list (generator-flatten (->generator (list (list 1 2) (list 3 4) (list 5) (list 6)))))
                    '(1 2 3 4 5 6))
-     (check-equal? (->list (generator-flatten (->generator (list (list 1 2 3 4 5 6)))))
+     (check-equal? (generator->list (generator-flatten (->generator (list (list 1 2 3 4 5 6)))))
                    '(1 2 3 4 5 6))
-     (check-equal? (->list (generator-flatten (->generator (list (list (list 1) (list 2)) (list (list 3) (list 4)) (list (list 5) (list 6))))))
+     (check-equal? (generator->list (generator-flatten (->generator (list (list (list 1) (list 2)) (list (list 3) (list 4)) (list (list 5) (list 6))))))
                    '(1 2 3 4 5 6))
-     (check-equal? (->list (generator-fold + (->generator (list 1 2 3 4))))
+     (check-equal? (generator->list (generator-fold + (->generator (list 1 2 3 4))))
                    '(1 3 6 10))
-     (check-equal? (->list (generator-fold +
-                                           (->generator (list 1 2 3 4))
-                                           12))
+     (check-equal? (generator->list (generator-fold +
+                                                    (->generator (list 1 2 3 4))
+                                                    12))
                    '(13 15 18 22))
-     (check-equal? (->list (generator-fold * (->generator (list 1 2 3 4))))
+     (check-equal? (generator->list (generator-fold * (->generator (list 1 2 3 4))))
                    '(1 2 6 24))
-     (check-equal? (->list (generator-fold .. (->generator (list "aa" "bb" "cc"))))
+     (check-equal? (generator->list (generator-fold .. (->generator (list "aa" "bb" "cc"))))
                    (list "aa" "bbaa" "ccbbaa"))
-     (check-equal? (->list (generator-fold ..
-                                           (->generator (list "aa" "bb" "cc"))
-                                           #:order 'bab))
+     (check-equal? (generator->list (generator-fold ..
+                                                    (->generator (list "aa" "bb" "cc"))
+                                                    #:order 'bab))
                    (list "aa" "aabb" "aabbcc"))
      (let-values ([(head gen) (generator-peek (->generator (list 1 2 3)))])
        (check-equal? head 1)
-       (check-equal? (->list gen) '(1 2 3)))
+       (check-equal? (generator->list gen) '(1 2 3)))
      (check-exn exn:fail? (thunk (generator-peek (generator () (void)))))
      (let-values ([(is-empty? gen) (generator-empty? (make-generator))])
        (check-true is-empty?))

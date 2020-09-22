@@ -47,7 +47,7 @@ This module provides general-purpose utilities to achieve standard "list-like" t
          generator?]
 	 )]{
 
-  Constructors for @racketlink[generator]{generators}, analogous to @racket[null], @racket[cons], and @racket[list] for lists. @racket[generator-null] serves as the null constructor as well as the identity value in composing generators, while @racket[generator-cons] constructs a new generator from an arbitrary value and an existing generator. @racket[make-generator] is a variadic constructor analogous to @racket[list]. If a @racket[return] value is provided to @racket[generator-null], it is used as the return value of the generator once it is exhausted -- that is, as the return value for any generator with this empty generator instance at its tail. Note that these constructors are @emph{not} lazy, at least for the moment.
+  Constructors for @racketlink[generator]{generators}, analogous to @racket[null], @racket[cons], and @racket[list] for lists. @racket[generator-null] serves as the null constructor as well as the identity value in composing generators, while @racket[generator-cons] constructs a new generator from an arbitrary value and an existing generator. @racket[make-generator] is a variadic constructor analogous to @racket[list]. If a @racket[return] value is provided to @racket[generator-null], it is used as the return value of the generator once it is exhausted -- that is, as the return value for any generator with this empty generator instance at its tail. Note that these constructors are @emph{not} lazy. In order to construct a generator from a sequence lazily, use @racket[generate] instead.
 
 @examples[
     #:eval eval-for-docs
@@ -59,7 +59,7 @@ This module provides general-purpose utilities to achieve standard "list-like" t
     (g)
     (define g (make-generator 1 2 3))
     (g)
-    (->list g)
+    (->list (in-producer g (void)))
   ]
 }
 
