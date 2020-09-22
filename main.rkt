@@ -23,13 +23,15 @@
 
 (provide gen:generator
          generator/c
-         generate
          generator
          yield  ; reprovided from racket/generator
          (contract-out
           [struct gen ((primitive generator?))]
           [generator? (-> any/c boolean?)]
           [generator-state (-> generator? symbol?)]
+          [generate (->* (any/c)
+                         (any/c)
+                         generator?)]
           [in-producer (->* (generator?)
                             (any/c)
                             #:rest (listof any/c)
@@ -345,6 +347,12 @@
      (check-equal? (->list (take 5 (in-producer (generator-cycle (make-generator 1))))) '(1 1 1 1 1))
      (check-equal? (->list (take 3 (in-producer (generator-repeat 5)))) '(5 5 5))
      (check-equal? (->list (take 3 (in-producer (generator-repeat (void))))) (list (void) (void) (void)))
+     (check-equal? (generator->list (generate (list 1 2 3))) (list 1 2 3))
+     (check-equal? (generator->list (generate (stream 1 2 3))) (list 1 2 3))
+     (check-equal? (let ([g (generate (list 1) 0)])
+                     (g)
+                     (g))
+                   0)
      (check-equal? (generator->list (generator-zip (->generator (list 1)) (->generator (list 4)))) '((1 4)))
      (check-equal? (generator->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b 'c)))) '((1 a) (2 b) (3 c)))
      (check-equal? (generator->list (generator-zip (->generator (list)) (->generator (list)))) '())
@@ -397,19 +405,19 @@
                                                     (->generator (list "aa" "bb" "cc"))
                                                     #:order 'bab))
                    (list "aa" "aabb" "aabbcc"))
-     (let-values ([(head gen) (generator-peek (->generator (list 1 2 3)))])
+     (let-values ([(head g) (generator-peek (->generator (list 1 2 3)))])
        (check-equal? head 1)
-       (check-equal? (generator->list gen) '(1 2 3)))
+       (check-equal? (generator->list g) '(1 2 3)))
      (check-exn exn:fail? (thunk (generator-peek (generator () (void)))))
-     (let-values ([(is-empty? gen) (generator-empty? (make-generator))])
+     (let-values ([(is-empty? g) (generator-empty? (make-generator))])
        (check-true is-empty?))
-     (let-values ([(is-empty? gen) (generator-empty? (make-generator 1))])
+     (let-values ([(is-empty? g) (generator-empty? (make-generator 1))])
        (check-false is-empty?))
-     (let ([gen (make-generator)])
-       (gen)
-       (check-true (generator-done? gen))
-       (let-values ([(is-empty? gen) (generator-empty? gen)])
-         (check-true (generator-done? gen)))))))
+     (let ([g (make-generator)])
+       (g)
+       (check-true (generator-done? g))
+       (let-values ([(is-empty? g) (generator-empty? g)])
+         (check-true (generator-done? g)))))))
 
 (module+ test
   (run-tests tests))
