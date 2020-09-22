@@ -9,7 +9,8 @@
                   yield
                   sequence->repeated-generator)
          (only-in racket/function
-                  const)
+                  const
+                  thunk*)
          racket/generic
          racket/undefined
          (except-in data/collection
@@ -103,6 +104,11 @@
   [(define (conj this v)
      (let ([g (gen-primitive this)])
        (generator-cons v g)))]
+
+  #:methods gen:sequence
+  [(define empty? (thunk* (error "Not implemented")))
+   (define first (thunk* (error "Not implemented")))
+   (define rest (thunk* (error "Not implemented")))]
 
   #:methods gen:generator
   [(define/generic -generator-state generator-state)
