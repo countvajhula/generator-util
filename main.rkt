@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require (prefix-in b: racket/base)
-         racket/contract
+         (except-in racket/contract
+                    predicate/c)
          racket/stream
          racket/match
          (prefix-in b: racket/generator)
@@ -18,6 +19,7 @@
                     foldl/steps
                     append
                     index-of)
+         contract/social
          relation)
 
 (require "private/util.rkt")
@@ -28,8 +30,8 @@
          yield  ; reprovided from racket/generator
          (contract-out
           [struct gen ((primitive generator?))]
-          [generator? (-> any/c boolean?)]
-          [generator-state (-> generator? symbol?)]
+          [generator? (predicate/c)]
+          [generator-state (function/c generator? symbol?)]
           [generate (->* (any/c)
                          (any/c)
                          generator?)]
@@ -40,39 +42,36 @@
           [generator-null (->* ()
                                (any/c)
                                generator?)]
-          [generator-cons (-> any/c
-                              generator?
-                              generator?)]
+          [generator-cons (binary-constructor/c any/c
+                                                generator?)]
           [make-generator (->* ()
                                #:rest (listof any/c)
                                generator?)]
           [generator-empty? (-> generator?
                                 (values boolean? generator?))]
-          [generator-done? (-> generator?
-                               boolean?)]
+          [generator-done? (predicate/c generator?)]
           [generator-peek (-> generator?
                               (values any/c generator?))]
-          [generator-map (-> (-> any/c any/c)
-                             generator?
-                             generator?)]
-          [generator-filter (-> (-> any/c boolean?)
-                                generator?
-                                generator?)]
-          [generator-fold (->* ((-> any/c any/c any/c) generator?)
+          [generator-map (binary-function/c (function/c)
+                                            generator?
+                                            generator?)]
+          [generator-filter (binary-function/c (predicate/c)
+                                               generator?
+                                               generator?)]
+          [generator-fold (->* ((binary-function/c any/c any/c any/c) generator?)
                                (any/c #:order (one-of/c 'abb 'bab))
                                generator?)]
           [yield-from (-> generator? any)]
-          [generator-append (-> generator? generator? generator?)]
+          [generator-append (binary-composition/c generator?)]
           [generator-cycle (->* (generator?)
                                 (any/c)
                                 generator?)]
-          [generator-repeat (-> any/c
-                                generator?)]
-          [generator-zip-with (-> procedure? generator? ... generator?)]
-          [generator-zip (-> generator? ... generator?)]
-          [generator-interleave (-> generator? ... generator?)]
-          [generator-join (-> generator? generator?)]
-          [generator-flatten (-> generator? generator?)]))
+          [generator-repeat (encoder/c generator?)]
+          [generator-zip-with (binary-variadic-function/c procedure? generator? generator?)]
+          [generator-zip (variadic-composition/c generator?)]
+          [generator-interleave (variadic-composition/c generator?)]
+          [generator-join (self-map/c generator?)]
+          [generator-flatten (self-map/c generator?)]))
 
 (module+ test
   (require rackunit
