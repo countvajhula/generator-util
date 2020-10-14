@@ -58,7 +58,7 @@
           [generator-filter (binary-function/c (predicate/c)
                                                generator?
                                                generator?)]
-          [generator-fold (->* ((binary-function/c any/c any/c any/c) generator?)
+          [generator-fold (->* ((binary-function/c) generator?)
                                (any/c #:order (one-of/c 'abb 'bab))
                                generator?)]
           [yield-from (-> generator? any)]
@@ -67,7 +67,9 @@
                                 (any/c)
                                 generator?)]
           [generator-repeat (encoder/c generator?)]
-          [generator-zip-with (binary-variadic-function/c procedure? generator? generator?)]
+          [generator-zip-with (binary-variadic-function/c procedure?
+                                                          generator?
+                                                          generator?)]
           [generator-zip (variadic-composition/c generator?)]
           [generator-interleave (variadic-composition/c generator?)]
           [generator-join (self-map/c generator?)]
