@@ -8,6 +8,7 @@
          (prefix-in b: racket/generator)
          (only-in racket/generator
                   yield
+                  sequence->generator
                   sequence->repeated-generator)
          (only-in racket/function
                   const
@@ -32,7 +33,7 @@
           [struct gen ((primitive generator?))]
           [generator? (predicate/c)]
           [generator-state (function/c generator? symbol?)]
-          [generate (->* (any/c)
+          [generate (->* ((or/c sequence? b:sequence?))
                          (any/c)
                          generator?)]
           [in-producer (->* (generator?)
@@ -147,10 +148,14 @@
 
 (define (generate seq [return (void)])
   (generator ()
-    (for-each (λ (v)
-                (yield v)
-                (void))
-              seq)
+    (if (sequence? seq)
+        (for-each (λ (v)
+                    (yield v)
+                    (void))
+                  seq)
+        ;; the contract ensures it's either a data/collection sequence
+        ;; or a built-in sequence
+        (yield-from (sequence->generator seq)))
     return))
 
 (define (in-producer g [stop undefined] . args)
@@ -360,6 +365,11 @@
                      (g)
                      (g))
                    0)
+     (check-equal? (generator->list (generate 3)) (list 0 1 2) "built-in (not data/collection) sequence")
+     (check-equal? (let ([g (generate 1 "bye")])
+                     (g)
+                     (g))
+                   "bye")
      (check-equal? (generator->list (generator-zip (->generator (list 1)) (->generator (list 4)))) '((1 4)))
      (check-equal? (generator->list (generator-zip (->generator (list 1 2 3)) (->generator (list 'a 'b 'c)))) '((1 a) (2 b) (3 c)))
      (check-equal? (generator->list (generator-zip (->generator (list)) (->generator (list)))) '())
