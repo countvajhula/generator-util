@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.com/countvajhula/generator-util.svg?branch=master
-    :target: https://travis-ci.com/countvajhula/generator-util
+.. image:: https://github.com/countvajhula/generator-util/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/countvajhula/generator-util/actions/workflows/test.yml
 
 .. image:: https://coveralls.io/repos/github/countvajhula/generator-util/badge.svg?branch=master
     :target: https://coveralls.io/github/countvajhula/generator-util?branch=master
