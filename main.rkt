@@ -31,7 +31,7 @@
          yield  ; reprovided from racket/generator
          (contract-out
           [struct gen ((primitive generator?))]
-          [generator? (predicate/c)]
+          [generator? predicate/c]
           [generator-state (function/c generator? symbol?)]
           [generate (->* ((or/c sequence? b:sequence?))
                          (any/c)
@@ -48,29 +48,29 @@
           [make-generator (->* ()
                                #:rest (listof any/c)
                                generator?)]
-          [generator-empty? (-> generator?
-                                (values boolean? generator?))]
+          [generator-empty? (function/c generator?
+                                        (values boolean? generator?))]
           [generator-done? (predicate/c generator?)]
-          [generator-peek (-> generator?
-                              (values any/c generator?))]
-          [generator-map (binary-function/c (function/c)
+          [generator-peek (function/c generator?
+                                      (values any/c generator?))]
+          [generator-map (binary-function/c function/c
                                             generator?
                                             generator?)]
-          [generator-filter (binary-function/c (predicate/c)
+          [generator-filter (binary-function/c predicate/c
                                                generator?
                                                generator?)]
-          [generator-fold (->* ((binary-function/c) generator?)
+          [generator-fold (->* (binary-function/c generator?)
                                (any/c #:order (one-of/c 'abb 'bab))
                                generator?)]
-          [yield-from (-> generator? any)]
+          [yield-from (function/c generator? any)]
           [generator-append (binary-composition/c generator?)]
           [generator-cycle (->* (generator?)
                                 (any/c)
                                 generator?)]
           [generator-repeat (encoder/c generator?)]
-          [generator-zip-with (binary-variadic-function/c procedure?
-                                                          generator?
-                                                          generator?)]
+          [generator-zip-with (variadic-function/c procedure?
+                                                   generator?
+                                                   generator?)]
           [generator-zip (variadic-composition/c generator?)]
           [generator-interleave (variadic-composition/c generator?)]
           [generator-join (self-map/c generator?)]
