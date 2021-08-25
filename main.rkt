@@ -53,12 +53,8 @@
           [generator-done? (predicate/c generator?)]
           [generator-peek (function/c generator?
                                       (values any/c generator?))]
-          [generator-map (binary-function/c function/c
-                                            generator?
-                                            generator?)]
-          [generator-filter (binary-function/c predicate/c
-                                               generator?
-                                               generator?)]
+          [generator-map (self-map/c generator? (head function/c))]
+          [generator-filter (self-map/c generator? (head predicate/c))]
           [generator-fold (->* (binary-function/c generator?)
                                (any/c #:order (one-of/c 'abb 'bab))
                                generator?)]
@@ -68,9 +64,8 @@
                                 (any/c)
                                 generator?)]
           [generator-repeat (encoder/c generator?)]
-          [generator-zip-with (variadic-function/c procedure?
-                                                   generator?
-                                                   generator?)]
+          [generator-zip-with (variadic-composition/c generator?
+                                                      (head procedure?))]
           [generator-zip (variadic-composition/c generator?)]
           [generator-interleave (variadic-composition/c generator?)]
           [generator-join (self-map/c generator?)]
