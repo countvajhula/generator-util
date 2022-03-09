@@ -13,8 +13,9 @@
                      "cover-coveralls"
                      "collections-doc"))
 (define scribblings '(("scribblings/generator-util.scrbl" ())))
-(define compile-omit-paths '("dev" "coverage"))
-(define clean '("compiled" "doc"))
+(define compile-omit-paths '("dev" "tests" "coverage"))
+(define test-include-paths '("tests"))
+(define clean '("compiled" "doc" "tests/compiled"))
 (define pkg-desc "Useful utilities for working with generators")
 (define version "1.1")
 (define pkg-authors '(countvajhula))
