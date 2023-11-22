@@ -65,7 +65,18 @@
     (check-equal? (generator->list
                    (generator ()
                      (yield-from (make-generator 1))))
-                  '(1)))
+                  '(1))
+    (check-equal? (call-with-values
+                   (generator ()
+                     (yield-from
+                      (generator ()
+                        (let loop ([i 3])
+                          (when (> i 0)
+                            (yield i 0)
+                            (loop (sub1 i)))))))
+                   list)
+                  '(3 0)
+                  "yield-from with multiple values"))
 
    (test-suite
     "generator-append"
@@ -89,7 +100,17 @@
                    (take 5 (in-producer
                             (generator-cycle
                              (make-generator 1)))))
-                  '(1 1 1 1 1)))
+                  '(1 1 1 1 1))
+    (check-equal? (call-with-values
+                   (generator-cycle
+                    (generator ()
+                      (let loop ([i 3])
+                        (when (> i 0)
+                          (yield i 0)
+                          (loop (sub1 i))))))
+                   list)
+                  '(3 0)
+                  "cycle multi-valued generator"))
 
    (test-suite
     "generator-repeat"
@@ -100,7 +121,11 @@
     (check-equal? (->list
                    (take 3 (in-producer
                             (generator-repeat (void)))))
-                  (list (void) (void) (void))))
+                  (list (void) (void) (void)))
+    (check-equal? (call-with-values
+                   (generator-repeat 1 2 3)
+                   list)
+                  (list 1 2 3)))
 
    (test-suite
     "generate"
@@ -193,7 +218,17 @@
     (check-equal? (generator->list
                    (generator-interleave (make-generator)
                                          (make-generator)))
-                  '()))
+                  '())
+    (let ([g (generator-interleave (generator ()
+                                     (let loop ([i 3])
+                                       (when (> i 0)
+                                         (yield i 1)
+                                         (loop (sub1 i)))))
+                                   (make-generator 3 2 1))])
+      (check-equal? (call-with-values g list)
+                    '(3 1))
+      (check-equal? (call-with-values g list)
+                    '(3))))
 
    (test-suite
     "in-producer"
@@ -214,7 +249,26 @@
                    (generator-map add1
                                   (->generator
                                    (list 1 2 3))))
-                  '(2 3 4)))
+                  '(2 3 4))
+    (check-equal? (generator->list
+                   (generator-map +
+                                  (generator ()
+                                    (let loop ([i 3])
+                                      (when (> i 0)
+                                        (yield i 1)
+                                        (loop (sub1 i)))))))
+                  '(4 3 2)
+                  "map over multi-valued generators")
+    (check-equal? (call-with-values
+                   (generator-map values
+                                  (generator ()
+                                    (let loop ([i 3])
+                                      (when (> i 0)
+                                        (yield i 1)
+                                        (loop (sub1 i))))))
+                   list)
+                  '(3 1)
+                  "multi-valued map over multi-valued generators"))
 
    (test-suite
     "generator-filter"
@@ -227,7 +281,17 @@
                    (generator-filter even?
                                      (->generator
                                       (list 1 2 3 4 5 6))))
-                  '(2 4 6)))
+                  '(2 4 6))
+    (check-equal? (call-with-values
+                   (generator-filter (compose odd? +)
+                                     (generator ()
+                                       (let loop ([i 3])
+                                         (when (> i 0)
+                                           (yield i 1)
+                                           (loop (sub1 i))))))
+                   list)
+                  '(2 1)
+                  "filter over multi-valued generators"))
 
    (test-suite
     "generator-join"
