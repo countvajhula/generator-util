@@ -63,7 +63,7 @@ Many of the utilities in this module support @seclink["values-model" #:doc '(lib
          generator?]
 @defproc[(generator-cons [v any/c] [g generator?])
          generator?]
-@defproc[(make-generator [v any/c] ...)
+@defproc[(make-generator [v any/c] ... [#:return return any/c (void)])
          generator?]
 	 )]{
 

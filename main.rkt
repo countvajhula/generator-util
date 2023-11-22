@@ -46,6 +46,7 @@
           [generator-cons (binary-constructor/c any/c
                                                 generator?)]
           [make-generator (->* ()
+                               (#:return any/c)
                                #:rest (listof any/c)
                                generator?)]
           [generator-empty? (function/c generator?
