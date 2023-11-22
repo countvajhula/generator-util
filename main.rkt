@@ -68,6 +68,7 @@
                                                       (head procedure?))]
           [generator-zip (variadic-composition/c generator?)]
           [generator-interleave (variadic-composition/c generator?)]
+          [generator-juxtapose (variadic-composition/c generator?)]
           [generator-join (self-map/c generator?)]
           [generator-flatten (self-map/c generator?)]))
 
@@ -284,6 +285,16 @@
                     (apply values cur)
                     (begin (apply yield cur)
                            (loop (rest remaining-gs)))))))))))
+
+(define (generator-juxtapose . gs)
+  (generator ()
+    (unless (empty? gs)
+      (let loop ()
+        (let ([mapped-gs (b:map (curryr call-with-values list) gs)])
+          (if (any? (b:map generator-done? gs))
+              (apply values (foldr append mapped-gs))
+              (begin (apply yield (foldr append mapped-gs))
+                     (loop))))))))
 
 (define (flatten-one-level vs)
   (if (sequence? vs)

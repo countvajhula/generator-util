@@ -231,6 +231,33 @@
                     '(3))))
 
    (test-suite
+    "generator-juxtapose"
+    (check-equal? (call-with-values
+                   (generator-juxtapose (make-generator 1 2 3)
+                                        (make-generator 4 5 6))
+                   list)
+                  '(1 4))
+    (check-equal? (call-with-values
+                   (generator-juxtapose (make-generator 1 2)
+                                        (make-generator #:return 0))
+                   list)
+                  '(1 0))
+    (check-equal? (call-with-values
+                   (generator-juxtapose (make-generator #:return 0)
+                                        (make-generator 1 2))
+                   list)
+                  '(0 1))
+    (let ([g (generator-juxtapose (generator ()
+                                    (let loop ([i 3])
+                                      (when (> i 0)
+                                        (yield i 1)
+                                        (loop (sub1 i)))))
+                                  (make-generator 3 2 1))])
+      (check-equal? (call-with-values g list)
+                    '(3 1 3))
+      (check-equal? (call-with-values g list)
+                    '(2 1 2))))
+   (test-suite
     "in-producer"
     (check-equal? (->list
                    (in-producer
