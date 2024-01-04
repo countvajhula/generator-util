@@ -143,22 +143,25 @@
                 (begin (apply yield curs)
                        (loop next (call-with-values g list)))))))))
 
-(define (make-generator #:return [return (void)] . vals)
+(define (make-generator #:return [return void] . vals)
   (match vals
     ['() (generator-null return)]
     [(cons v vs) (generator-cons v (apply make-generator #:return return vs))]))
 
 (define (generate seq [return void])
-  (generator ()
-    (if (sequence? seq)
-        (for-each (λ (v)
-                    (yield v)
-                    (void))
-                  seq)
-        ;; the contract ensures it's either a data/collection sequence
-        ;; or a built-in sequence
-        (yield-from (sequence->generator seq)))
-    (return)))
+  (let ([return (if (procedure? return)
+                    return
+                    (thunk return))])
+    (generator ()
+      (if (sequence? seq)
+          (for-each (λ (v)
+                      (yield v)
+                      (void))
+                    seq)
+          ;; the contract ensures it's either a data/collection sequence
+          ;; or a built-in sequence
+          (yield-from (sequence->generator seq)))
+      (return))))
 
 (define (in-producer g [stop undefined] . args)
   (let ([pred (cond [(undefined? stop) (const #t)]
