@@ -141,9 +141,9 @@
     (return)))
 
 (define (in-producer g [stop undefined] . args)
-  (let ([pred (if (undefined? stop)
-                  (const #t)
-                  (!! (curry = stop)))])
+  (let ([pred (cond [(undefined? stop) (const #t)]
+                    [(procedure? stop) (!! stop)]
+                    [else (!! (curry = stop))])])
     (take-while pred
                 (build-sequence (apply unthunk g args)))))
 
