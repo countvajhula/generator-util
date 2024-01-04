@@ -431,7 +431,11 @@
     (let-values ([(is-empty? g) (generator-empty? (make-generator))])
       (check-true is-empty?))
     (let-values ([(is-empty? g) (generator-empty? (make-generator 1))])
-      (check-false is-empty?)))
+      (check-false is-empty?
+                   "nonempty single-valued generator"))
+    (let-values ([(is-empty? g) (generator-empty? (generator-cons* (list 1 2) (generator-null)))])
+      (check-false is-empty?
+                   "nonempty multi-valued generator")))
 
    (test-suite
     "generator-done?"

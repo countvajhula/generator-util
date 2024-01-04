@@ -173,12 +173,12 @@
 (define (generator-empty? g)
   (if (generator-done? g)
       (values #t g)
-      (let ([val (g)])
+      (let ([vs (call-with-values g list)])
         (if (generator-done? g)
             (values #t
-                    (generator-null val))
+                    (generator-null (λ () (apply values vs))))
             (values #f
-                    (generator-cons val g))))))
+                    (generator-cons* vs g))))))
 
 (define (generator-done? g)
   (= (generator-state g)
