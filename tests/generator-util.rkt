@@ -40,6 +40,26 @@
       (check-equal? (g) 5)))
 
    (test-suite
+    "generator-cons*"
+    (let ([g (generator-cons* (list 4 5 6)
+                              (generator-null (thunk (values 1 2 3))))])
+      (check-equal? (call-with-values g list)
+                    '(4 5 6))
+      (check-equal? (call-with-values g list)
+                    '(1 2 3))
+      (check-true (generator-done? g)))
+    (let ([g (generator-cons* (list 4) (generator-null))])
+      (g)
+      (g)
+      (check-equal? (generator-state g) 'done)
+      (check-equal? (g) (void)))
+    (let ([g (generator-cons* (list 4) (generator-null 5))])
+      (g)
+      (g)
+      (check-equal? (generator-state g) 'done)
+      (check-equal? (g) 5)))
+
+   (test-suite
     "make-generator"
     (check-equal? (generator->list
                    (make-generator 1 2 3))

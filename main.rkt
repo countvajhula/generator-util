@@ -12,6 +12,7 @@
                   sequence->repeated-generator)
          (only-in racket/function
                   const
+                  thunk
                   thunk*)
          racket/generic
          racket/undefined
@@ -34,7 +35,7 @@
           [generator? predicate/c]
           [generator-state (function/c generator? symbol?)]
           [generate (->* ((or/c sequence? b:sequence?))
-                         (procedure?)
+                         (any/c)
                          generator?)]
           [in-producer (->* (generator?)
                             (any/c)
@@ -45,6 +46,8 @@
                                generator?)]
           [generator-cons (binary-constructor/c any/c
                                                 generator?)]
+          [generator-cons* (binary-constructor/c list?
+                                                 generator?)]
           [make-generator (->* ()
                                (#:return any/c)
                                #:rest (listof any/c)
@@ -105,9 +108,12 @@
     (let ([g (gen-primitive this)])
       (apply g args))))
 
-(define (generator-null [return (void)])
-  (generator ()
-    return))
+(define (generator-null [return void])
+  (let ([return (if (procedure? return)
+                    return
+                    (thunk return))])
+    (generator ()
+      (return))))
 
 (define (generator-cons v g)
   (generator ()
@@ -119,9 +125,23 @@
                      [next (g)])
             (if (generator-done? g)
                 (begin (yield cur)
-                       (g))
+                       next)
                 (begin (yield cur)
                        (loop next (g)))))))))
+
+(define (generator-cons* vs g)
+  (generator ()
+    (apply yield vs)
+    (let ([curs (call-with-values g list)])
+      (if (generator-done? g)
+          (apply values curs)
+          (let loop ([curs curs]
+                     [next (call-with-values g list)])
+            (if (generator-done? g)
+                (begin (apply yield curs)
+                       (apply values next))
+                (begin (apply yield curs)
+                       (loop next (call-with-values g list)))))))))
 
 (define (make-generator #:return [return (void)] . vals)
   (match vals
