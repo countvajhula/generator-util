@@ -34,7 +34,7 @@
           [generator? predicate/c]
           [generator-state (function/c generator? symbol?)]
           [generate (->* ((or/c sequence? b:sequence?))
-                         (any/c)
+                         (procedure?)
                          generator?)]
           [in-producer (->* (generator?)
                             (any/c)
@@ -128,7 +128,7 @@
     ['() (generator-null return)]
     [(cons v vs) (generator-cons v (apply make-generator #:return return vs))]))
 
-(define (generate seq [return (void)])
+(define (generate seq [return void])
   (generator ()
     (if (sequence? seq)
         (for-each (λ (v)
@@ -138,7 +138,7 @@
         ;; the contract ensures it's either a data/collection sequence
         ;; or a built-in sequence
         (yield-from (sequence->generator seq)))
-    return))
+    (return)))
 
 (define (in-producer g [stop undefined] . args)
   (let ([pred (if (undefined? stop)

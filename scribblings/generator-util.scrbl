@@ -344,7 +344,7 @@ Yield all values from a provided generator. This should only be used inside a ge
 
 @section{Transformers}
 
-@defproc[(generate [seq sequence?] [return any/c (void)])
+@defproc[(generate [seq sequence?] [return procedure? void])
          generator?]{
 
 Returns a generator that generates @racket[seq]. See @racket[->generator] for some considerations here.
