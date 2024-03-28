@@ -10,18 +10,24 @@
                     (only-in data/collection sequence? cycle repeat gen:collection)
                     (only-in relation ->list ->generator fold :)]]
 
-@(define eval-for-docs
-  (parameterize ([sandbox-output 'string]
-                 [sandbox-error-output 'string]
-                 [sandbox-memory-limit #f])
-                 (make-evaluator 'racket/base
-                                 '(require relation
-                                           generator-util
-                                           racket/set
-                                           racket/generic
-                                           (prefix-in b: racket/generator)
-                                           (only-in racket range)
-                                           racket/stream))))
+@(define (make-eval-for-docs . exprs)
+   (parameterize ([sandbox-output 'string]
+                  [sandbox-error-output 'string]
+                  [sandbox-memory-limit #f])
+     (apply make-base-eval
+            '(require relation
+                      generator-util
+                      racket/set
+                      racket/generic
+                      (prefix-in b: racket/generator)
+                      (only-in racket range)
+                      racket/stream)
+            exprs)))
+
+@; adding a lambda indirection in creating the evaluator
+@; fixes "dynamic-require: name is protected [...] name: 'syntax-local-expand-observer
+@; reason unknown.
+@(define eval-for-docs (make-eval-for-docs))
 
 @title{Generator Utilities}
 @author{Siddhartha Kasivajhula}
