@@ -12,6 +12,7 @@
                   sequence->repeated-generator)
          (only-in racket/function
                   const
+                  thunk
                   thunk*)
          racket/generic
          racket/undefined
@@ -45,7 +46,10 @@
                                generator?)]
           [generator-cons (binary-constructor/c any/c
                                                 generator?)]
+          [generator-cons* (binary-constructor/c list?
+                                                 generator?)]
           [make-generator (->* ()
+                               (#:return any/c)
                                #:rest (listof any/c)
                                generator?)]
           [generator-empty? (function/c generator?
@@ -53,8 +57,8 @@
           [generator-done? (predicate/c generator?)]
           [generator-peek (function/c generator?
                                       (values any/c generator?))]
-          [generator-map (self-map/c generator? (head function/c))]
-          [generator-filter (self-map/c generator? (head predicate/c))]
+          [generator-map (self-map/c generator? (head any/c))]
+          [generator-filter (self-map/c generator? (head any/c))]
           [generator-fold (->* (binary-function/c generator?)
                                (any/c #:order (one-of/c 'abb 'bab))
                                generator?)]
@@ -63,11 +67,12 @@
           [generator-cycle (->* (generator?)
                                 (any/c)
                                 generator?)]
-          [generator-repeat (encoder/c generator?)]
+          [generator-repeat (-> any/c ... generator?)]
           [generator-zip-with (variadic-composition/c generator?
                                                       (head procedure?))]
           [generator-zip (variadic-composition/c generator?)]
           [generator-interleave (variadic-composition/c generator?)]
+          [generator-juxtapose (variadic-composition/c generator?)]
           [generator-join (self-map/c generator?)]
           [generator-flatten (self-map/c generator?)]))
 
@@ -103,9 +108,12 @@
     (let ([g (gen-primitive this)])
       (apply g args))))
 
-(define (generator-null [return (void)])
-  (generator ()
-    return))
+(define (generator-null [return void])
+  (let ([return (if (procedure? return)
+                    return
+                    (thunk return))])
+    (generator ()
+      (return))))
 
 (define (generator-cons v g)
   (generator ()
@@ -117,43 +125,60 @@
                      [next (g)])
             (if (generator-done? g)
                 (begin (yield cur)
-                       (g))
+                       next)
                 (begin (yield cur)
                        (loop next (g)))))))))
 
-(define (make-generator #:return [return (void)] . vals)
+(define (generator-cons* vs g)
+  (generator ()
+    (apply yield vs)
+    (let ([curs (call-with-values g list)])
+      (if (generator-done? g)
+          (apply values curs)
+          (let loop ([curs curs]
+                     [next (call-with-values g list)])
+            (if (generator-done? g)
+                (begin (apply yield curs)
+                       (apply values next))
+                (begin (apply yield curs)
+                       (loop next (call-with-values g list)))))))))
+
+(define (make-generator #:return [return void] . vals)
   (match vals
     ['() (generator-null return)]
     [(cons v vs) (generator-cons v (apply make-generator #:return return vs))]))
 
-(define (generate seq [return (void)])
-  (generator ()
-    (if (sequence? seq)
-        (for-each (λ (v)
-                    (yield v)
-                    (void))
-                  seq)
-        ;; the contract ensures it's either a data/collection sequence
-        ;; or a built-in sequence
-        (yield-from (sequence->generator seq)))
-    return))
+(define (generate seq [return void])
+  (let ([return (if (procedure? return)
+                    return
+                    (thunk return))])
+    (generator ()
+      (if (sequence? seq)
+          (for-each (λ (v)
+                      (yield v)
+                      (void))
+                    seq)
+          ;; the contract ensures it's either a data/collection sequence
+          ;; or a built-in sequence
+          (yield-from (sequence->generator seq)))
+      (return))))
 
 (define (in-producer g [stop undefined] . args)
-  (let ([pred (if (undefined? stop)
-                  (const #t)
-                  (!! (curry = stop)))])
+  (let ([pred (cond [(undefined? stop) (const #t)]
+                    [(procedure? stop) (!! stop)]
+                    [else (!! (curry = stop))])])
     (take-while pred
                 (build-sequence (apply unthunk g args)))))
 
 (define (generator-empty? g)
   (if (generator-done? g)
       (values #t g)
-      (let ([val (g)])
+      (let ([vs (call-with-values g list)])
         (if (generator-done? g)
             (values #t
-                    (generator-null val))
+                    (generator-null (λ () (apply values vs))))
             (values #f
-                    (generator-cons val g))))))
+                    (generator-cons* vs g))))))
 
 (define (generator-done? g)
   (= (generator-state g)
@@ -174,30 +199,35 @@
 
 (define (generator-map f g)
   (generator ()
-    (let loop ([cur (g)]
-               [next (g)])
-      (if (generator-done? g)
-          (begin (yield (f cur))
-                 (let ([result (g)])
-                   (unless (void? result)
-                     (f result))))
-          (begin (yield (f cur))
-                 (loop next (g)))))))
+    (let loop ([cur (call-with-values g list)]
+               [next (call-with-values g list)])
+      (let ([mapped-cur (call-with-values
+                         (λ () (apply f cur))
+                         list)])
+        (if (generator-done? g)
+            (begin (apply yield mapped-cur)
+                   (let ([result (call-with-values g list)])
+                     (unless (and (null? (cdr result))
+                                  (void? (car result)))
+                       (apply f result))))
+            (begin (apply yield mapped-cur)
+                   (loop next (call-with-values g list))))))))
 
 (define (generator-filter pred g)
   (generator ()
-    (let loop ([cur (g)]
-               [next (g)])
+    (let loop ([cur (call-with-values g list)]
+               [next (call-with-values g list)])
       (if (generator-done? g)
-          (begin (when (pred cur)
-                   (yield cur))
-                 (let ([result (g)])
-                   (unless (void? result)
-                     (when (pred result)
-                       result))))
-          (begin (when (pred cur)
-                   (yield cur))
-                 (loop next (g)))))))
+          (begin (when (apply pred cur)
+                   (apply yield cur))
+                 (let ([result (call-with-values g list)])
+                   (unless (and (null? (cdr result))
+                                (void? (car result)))
+                     (when (apply pred result)
+                       (apply values result)))))
+          (begin (when (apply pred cur)
+                   (apply yield cur))
+                 (loop next (call-with-values g list)))))))
 
 (define (generator-fold f g [base undefined] #:order [order 'abb])
   (generator ()
@@ -228,11 +258,12 @@
       (raise-argument-error 'yield-from
                             "Generator in a non-terminal state"
                             g)
-      (let ([v (g)])
-        (if (generator-done? g)
-            v
-            (begin (yield v)
-                   (yield-from g))))))
+      (call-with-values g
+                        (λ vs
+                          (if (generator-done? g)
+                              (apply values vs)
+                              (begin (apply yield vs)
+                                     (yield-from g)))))))
 
 (define (generator-append a b)
   (generator ()
@@ -240,10 +271,21 @@
     (yield-from b)))
 
 (define (generator-cycle g [stop (void)])
-  (sequence->repeated-generator (in-producer g stop)))
+  (generator ()
+    (let loop ([acc null])
+      (let ([cur (call-with-values g list)])
+        (unless (generator-done? g)
+          (apply yield cur)
+          (loop (cons cur acc))))
+      (let ([acc (reverse acc)])
+        (for ([cur (in-cycle acc)])
+          (apply yield cur))))))
 
-(define (generator-repeat v)
-  (sequence->repeated-generator (list v)))
+(define (generator-repeat . vs)
+  (generator ()
+    (let loop ()
+      (apply yield vs)
+      (loop))))
 
 (define (generator-zip-with f . gs)
   (generator ()
@@ -262,11 +304,21 @@
         (if (empty? remaining-gs)
             (loop gs)
             (let ([first-g (first remaining-gs)])
-              (let ([cur (first-g)])
+              (let ([cur (call-with-values first-g list)])
                 (if (generator-done? first-g)
-                    cur
-                    (begin (yield cur)
+                    (apply values cur)
+                    (begin (apply yield cur)
                            (loop (rest remaining-gs)))))))))))
+
+(define (generator-juxtapose . gs)
+  (generator ()
+    (unless (empty? gs)
+      (let loop ()
+        (let ([mapped-gs (b:map (curryr call-with-values list) gs)])
+          (if (any? (b:map generator-done? gs))
+              (apply values (foldr append mapped-gs))
+              (begin (apply yield (foldr append mapped-gs))
+                     (loop))))))))
 
 (define (flatten-one-level vs)
   (if (sequence? vs)
