@@ -40,6 +40,8 @@ This module provides general-purpose utilities to achieve standard "list-like" t
 
 This module additionally provides a generic interface @racket[gen:generator] representing a generator, as well as a particular generator type @racket[gen] implementing that interface. The former allows supporting generator semantics in @seclink["define-struct" #:doc '(lib "scribblings/guide/guide.scrbl")]{custom types} and the latter is a rich generator type usable as a drop-in replacement for built-in generators, which comes with some conveniences.
 
+Many of the utilities in this module support @seclink["values-model" #:doc '(lib "scribblings/reference/reference.scrbl")]{multiple values}. That is, generators may yield more than one value or even no values at a time.
+
 @elemtag["coroutines"]{@bold{Caveat}}: These utilities are not suitable for use with coroutines, i.e. in cases where there is bidirectional communication with a generator. This is because the utilities wrap underlying generators with intermediary ones in some cases, and values sent to them are not conveyed to the underlying generators.
 
 @section{Constructors}
@@ -67,7 +69,7 @@ This module additionally provides a generic interface @racket[gen:generator] rep
          generator?]
 @defproc[(generator-cons [v any/c] [g generator?])
          generator?]
-@defproc[(make-generator [v any/c] ...)
+@defproc[(make-generator [v any/c] ... [#:return return any/c (void)])
          generator?]
 	 )]{
 
@@ -128,6 +130,8 @@ This module additionally provides a generic interface @racket[gen:generator] rep
          (values any/c generator?)]{
 
  "Peek" at the first value in the generator without modifying it. Of course, inspecting the first element in a generator must necessarily modify it. To preserve the illusion that no mutation has taken place, a generator equivalent to the original one prior to mutation is returned along with the peeked-at value. This returned generator is expected to be used in place of the original one in the calling context as it will be functionally equivalent to the original one, modulo the @elemref["coroutines"]{aforementioned caveat} about coroutines. Additionally, peeking does not protect against invocation side-effects. If invoking @racket[g] results in a side-effect, that would still happen if you peek at it. But it won't happen a second time since the replacement generator only includes the return value from the original invocation, and not the side effect.
+
+ This does not support multi-valued generators (i.e. those yielding either less or more than one value at a time).
 
 @examples[
     #:eval eval-for-docs
@@ -285,6 +289,21 @@ Returns a fresh generator whose values are the elements of the input generators 
   ]
 }
 
+@defproc[(generator-juxtapose [g generator?]
+                              ...)
+         generator?]{
+
+Returns a fresh generator that concatenates the values from one invocation of all of the input generators. The generation stops when one of the input generators runs out of values.
+
+@examples[
+    #:eval eval-for-docs
+	(define g (generator-juxtapose (make-generator 1 2 3) (make-generator 4 5 6)))
+	(g)
+	(g)
+	(g)
+  ]
+}
+
 @defproc[(generator-join [g generator?])
          generator?]{
 
@@ -331,7 +350,7 @@ Yield all values from a provided generator. This should only be used inside a ge
 
 @section{Transformers}
 
-@defproc[(generate [seq sequence?] [return any/c (void)])
+@defproc[(generate [seq sequence?] [return procedure? void])
          generator?]{
 
 Returns a generator that generates @racket[seq]. See @racket[->generator] for some considerations here.
